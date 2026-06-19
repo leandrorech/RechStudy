@@ -1126,6 +1126,12 @@ function newRun(){ _runCounter++; _activeRun = _runCounter; return _runCounter; 
 function isRunActive(id){ return _activeRun === id; }
 function cancelPendingRuns(){ _runCounter++; _activeRun = _runCounter; }
 // ─────────────────────────────────────────────────────
+function addSS(tipo, content){
+  if(!S.sess) S.sess=[];
+  S.sess.unshift({tipo, content, tema:S.tema||"", nivel:S.nivel||"", data:new Date().toISOString().slice(0,16).replace("T"," ")});
+  if(S.sess.length>20) S.sess=S.sess.slice(0,20);
+  svSS();
+}
 
 function render(){updateKeyStatus();
   document.getElementById("tabs").innerHTML=TABS.map(t=>`<button class="tab ${S.tab===t.id?"active":""}" onclick="setTab('${t.id}')">${t.label}</button>`).join("");
