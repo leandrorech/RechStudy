@@ -445,14 +445,7 @@ function calcSOFA(){
 }
 function sofaCalc(){
   const scores=["sofa_resp","sofa_coag","sofa_figado","sofa_cardio","sofa_neuro","sofa_renal"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
-  const total=scores.reduce((a,b)=>a+b,0);
-  let prog="",col="#34d399";
-  if(total>=11){prog="Mortalidade ~95%";col="#f87171";}
-  else if(total>=9){prog="Mortalidade ~40-60%";col="#f87171";}
-  else if(total>=7){prog="Mortalidade ~20-40%";col="#fbbf24";}
-  else if(total>=5){prog="Mortalidade ~10-20%";col="#fbbf24";}
-  else if(total>=2){prog="Mortalidade <10%";col="#34d399";}
-  else{prog="Sem disfunção significativa";col="#34d399";}
+  const{total,prog,col}=RechCalc.sofaScore(scores);
   cSet("sofa",`<div>SOFA Total: <strong style="color:${col};font-size:16px">${total}</strong> pontos</div>${cAlrt(prog,col)}${total>=2?cAlrt("SOFA ≥2: critério diagnóstico de sepse (Sepsis-3, 2016)","#60a5fa"):""}`);
 }
 
@@ -467,11 +460,8 @@ function calcQSOFA(){
   </div>`;
 }
 function qsofaCalc(){
-  const total=["qsofa_fr","qsofa_ecv","qsofa_pas"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;}).reduce((a,b)=>a+b,0);
-  let msg="",col="#34d399";
-  if(total>=2){msg="qSOFA ≥2 — alto risco de sepse. Avaliar SOFA completo, lactato, culturas, antibiótico.";col="#f87171";}
-  else if(total===1){msg="qSOFA 1 — monitorar e reavaliar.";}
-  else{msg="qSOFA 0 — baixo risco (triagem negativa).";}
+  const[fr,ecv,pas]=["qsofa_fr","qsofa_ecv","qsofa_pas"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
+  const{total,msg,col}=RechCalc.qsofaScore({fr,ecv,pas});
   cSet("qsofa",`<div>qSOFA: <strong style="color:${col};font-size:16px">${total}</strong>/3</div>${cAlrt(msg,col)}`);
 }
 
@@ -490,21 +480,11 @@ function calcAnionGap(){
 function agCalc(){
   const na=cN("na"),cl=cN("cl"),hco3=cN("hco3"),alb=cN("alb");
   if(isNaN(na)||isNaN(cl)||isNaN(hco3)){cSet("ag","<span style='color:#4a7a4a'>Preencha Na⁺, Cl⁻ e HCO₃⁻.</span>");return;}
-  const ag=na-cl-hco3;
-  const agCorr=isNaN(alb)?ag:ag+2.5*(4.0-alb);
-  let agMsg="",col="#34d399";
-  if(agCorr>12){agMsg="AG elevado → acidose metabólica com AG (MUDPILES: metanol, uremia, DKA, propileno, INH/ferro, lactato, etilenoglicol, salicilato)";col="#f87171";}
-  else{agMsg="AG normal (8-12) → acidose hiperclorêmica (diarreia, ATR, NaCl, ureterossigmoidostomia)";}
+  const{ag,agCorr}=RechCalc.anionGapCore(na,cl,hco3,alb);
+  const{msg:agMsg,col}=RechCalc.classifyAnionGapSimple(agCorr);
   let deltaMsg="";
   if(agCorr>12&&!isNaN(hco3)){
-    const deltaAG=agCorr-12;
-    const deltaHCO3=24-hco3;
-    const deltaRatio=deltaAG/Math.max(deltaHCO3,0.1);
-    let dr="";
-    if(deltaRatio<0.4)dr="Acidose metabólica hiperclorêmica coexistente";
-    else if(deltaRatio<1)dr="Acidose mista (AG + normal)";
-    else if(deltaRatio<=2)dr="Acidose metabólica pura com AG";
-    else dr="Alcalose metabólica coexistente";
+    const{deltaRatio,msg:dr}=RechCalc.deltaRatioSimple(agCorr,hco3);
     deltaMsg=cAlrt(`Delta ratio: ${deltaRatio.toFixed(2)} → ${dr}`,"#c084fc");
   }
   cSet("ag",`<div>AG: ${cFmt(ag,"mEq/L")} ${!isNaN(alb)?`| AG corrigido albumina: ${cFmt(agCorr,"mEq/L")}`:""}</div>${cAlrt(agMsg,col)}${deltaMsg}`);
@@ -528,26 +508,15 @@ function deltaCalc(){
   let out="";
   const ur=cN("ur"),cr=cN("cr"),tgo=cN("tgo"),tgp=cN("tgp"),bd=cN("bd"),bt=cN("bt");
   if(!isNaN(ur)&&!isNaN(cr)&&cr>0){
-    const r=ur/cr;
-    let msg="",col="#34d399";
-    if(r>20){msg="Ureia/Cr >20 — sugere pré-renal ou sangramento GI alto";col="#fbbf24";}
-    else if(r<10){msg="Ureia/Cr <10 — sugere NTA ou doença intrínseca";col="#60a5fa";}
-    else{msg="Ureia/Cr 10-20 — zona indeterminada";}
+    const{ratio:r,msg,col}=RechCalc.ureiaCreatininaRatio(ur,cr);
     out+=`<div>Ureia/Creatinina: ${cFmt(r,"",1)} ${cAlrt(msg,col)}</div>`;
   }
   if(!isNaN(tgo)&&!isNaN(tgp)&&tgp>0){
-    const r=tgo/tgp;
-    let msg="",col="#34d399";
-    if(r>2){msg="TGO/TGP >2 — hepatite alcoólica (sensibilidade ~70%)";col="#fbbf24";}
-    else if(r>1){msg="TGO/TGP 1-2 — inespecífico; pensar álcool, cirrose, NASH";col="#fbbf24";}
-    else{msg="TGO/TGP <1 — hepatite viral, medicamentosa, isquêmica";}
+    const{ratio:r,msg,col}=RechCalc.tgoTgpRatio(tgo,tgp);
     out+=`<div style="margin-top:8px">TGO/TGP: ${cFmt(r,"",2)} ${cAlrt(msg,col)}</div>`;
   }
   if(!isNaN(bd)&&!isNaN(bt)&&bt>0){
-    const r=(bd/bt)*100;
-    let msg="",col="#34d399";
-    if(r>50){msg="BD/BT >50% — predomínio colestático/obstrução";col="#fbbf24";}
-    else{msg="BD/BT <50% — predomínio de bilirrubina indireta (hemólise, Gilbert, disfunção conjugação)";}
+    const{pct:r,msg,col}=RechCalc.bdBtPercent(bd,bt);
     out+=`<div style="margin-top:8px">BD/BT: ${cFmt(r,"%",0)} ${cAlrt(msg,col)}</div>`;
   }
   if(!out)out="<span style='color:#4a7a4a'>Preencha os campos para calcular.</span>";
@@ -586,27 +555,33 @@ function vmBCalc(){
   const pbw=isNaN(h)?NaN:(window.vmBSex==="M"?50+0.91*(h-152.4):45.5+0.91*(h-152.4));
   if(!isNaN(pbw))out+=`<div>PBW (${window.vmBSex==="M"?"♂":"♀"} ${isNaN(h)?"?":h}cm): ${cFmt(pbw,"kg")}</div>`;
   if(!isNaN(pplat)&&!isNaN(peep)){
-    const dp=pplat-peep;
-    const col=dp>15?"#f87171":dp>13?"#fbbf24":"#34d399";
-    out+=`<div style="margin-top:6px">Driving Pressure: ${cFmt(dp,"cmH₂O")}${cAlrt(dp>15?"⚠️ DP >15 — revisar Vt/PEEP (só válido em passivo)":dp>13?"⚠️ DP borderline 13-15":"✅ DP ≤13 cmH₂O",col)}</div>`;
+    const dp=RechCalc.drivingPressure(pplat,peep);
+    const{msg:dpMsg,col}=RechCalc.classifyDPBeiraleito(dp);
+    out+=`<div style="margin-top:6px">Driving Pressure: ${cFmt(dp,"cmH₂O")}${cAlrt(dpMsg,col)}</div>`;
     if(!isNaN(vt)&&vt>0){
-      const cst=vt/(pplat-peep);
-      out+=`<div style="margin-top:6px">Compliance estática: ${cFmt(cst,"mL/cmH₂O")}${cAlrt(cst<30?"⚠️ Cst <30 — muito rígido (SDRA grave, atelectasia, PTX)":cst<50?"⚠️ Cst 30-50 — SDRA/restrição":"✅ Cst normal >50",cst<30?"#f87171":cst<50?"#fbbf24":"#34d399")}</div>`;
-      if(!isNaN(pbw)&&pbw>0){const vtkg=vt/pbw;out+=`<div style="margin-top:6px">Vt/kg PBW: ${cFmt(vtkg,"mL/kg")}${cAlrt(vtkg>8?"⚠️ >8 mL/kg — acima do alvo protetor. Em SDRA: reduzir para 4-6":vtkg>6?"⚠️ 6-8 mL/kg — aceitável em pulmão saudável":"✅ ≤6 mL/kg PBW — meta ARDSNet",vtkg>8?"#f87171":vtkg>6?"#fbbf24":"#34d399")}</div>`;}
+      const cst=RechCalc.staticCompliance(vt,pplat,peep);
+      const{msg:cstMsg,col:cstCol}=RechCalc.classifyComplianceBeiraleito(cst);
+      out+=`<div style="margin-top:6px">Compliance estática: ${cFmt(cst,"mL/cmH₂O")}${cAlrt(cstMsg,cstCol)}</div>`;
+      if(!isNaN(pbw)&&pbw>0){
+        const vtkg=RechCalc.calcVtPerKgPBW(vt,pbw);
+        const{msg:vtMsg,col:vtCol}=RechCalc.classifyVtKgBeiraleito(vtkg);
+        out+=`<div style="margin-top:6px">Vt/kg PBW: ${cFmt(vtkg,"mL/kg")}${cAlrt(vtMsg,vtCol)}</div>`;
+      }
     }
   }
   if(!isNaN(pao2)&&!isNaN(fio2)&&fio2>0){
-    const pf=pao2/fio2;
-    const grau=pf<=100?"Grave (≤100)":pf<=200?"Moderada (101-200)":pf<=300?"Leve (201-300)":"Normal (>300)";
-    const col=pf<=100?"#f87171":pf<=200?"#fbbf24":pf<=300?"#fbbf24":"#34d399";
+    const pf=RechCalc.pfRatio(pao2,fio2);
+    const{grau,col}=RechCalc.classifyPF(pf);
     out+=`<div style="margin-top:6px">P/F: ${cFmt(pf,"",0)} ${cAlrt("SDRA "+grau+" — Berlim 2012",col)}</div>`;
   }
   if(!isNaN(fr)&&!isNaN(vtsp)&&vtsp>0){
-    const tobin=fr/(vtsp/1000);
-    out+=`<div style="margin-top:6px">Índice de Tobin (f/Vt): ${cFmt(tobin,"ipm/L",0)}${cAlrt(tobin>105?"⚠️ >105 — alta prob de falha de desmame (Yang & Tobin 1991)":"✅ ≤105 — favorável ao desmame",tobin>105?"#f87171":"#34d399")}</div>`;
+    const tobin=RechCalc.tobinIndex(fr,vtsp);
+    const{msg:tobinMsg,col:tobinCol}=RechCalc.classifyTobinBeiraleito(tobin);
+    out+=`<div style="margin-top:6px">Índice de Tobin (f/Vt): ${cFmt(tobin,"ipm/L",0)}${cAlrt(tobinMsg,tobinCol)}</div>`;
   }
   if(!isNaN(p01)){
-    out+=`<div style="margin-top:6px">P0.1: ${cFmt(p01,"cmH₂O")}${cAlrt(p01>3.5?"⚠️ >3.5 — drive alto, risco P-SILI. Avaliar sedação/BNM":p01<0.5?"⚠️ <0.5 — drive baixo (sobressedação/fadiga)":"✅ 0.5-3.5 — zona segura",p01>3.5?"#f87171":p01<0.5?"#fbbf24":"#34d399")}</div>`;
+    const{msg:p01Msg,col:p01Col}=RechCalc.classifyP01Beiraleito(p01);
+    out+=`<div style="margin-top:6px">P0.1: ${cFmt(p01,"cmH₂O")}${cAlrt(p01Msg,p01Col)}</div>`;
   }
   if(!out)out="<span style='color:#4a7a4a'>Preencha os campos para calcular.</span>";
   cSet("vmb",out);
@@ -673,18 +648,13 @@ function calcCardio(){
   </div>`;
 }
 function chaCalc(){
-  const sc=["cha_ic","cha_has","cha_idade","cha_dm","cha_avc","cha_dvasc","cha_sex"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;}).reduce((a,b)=>a+b,0);
-  let msg="",col="#34d399";
-  if(sc>=2){msg="Score ≥2: anticoagulação indicada (exceto contraindicação). Preferir DOAC.";col="#f87171";}
-  else if(sc===1){msg="Score 1 (homem): considerar anticoagulação. Score 1 (mulher com só sexo feminino): não anticoagular.";col="#fbbf24";}
-  else{msg="Score 0 (homem) / 1 (mulher=sexo): baixo risco — anticoagulação geralmente não indicada.";}
+  const[ic,has,idade,dm,avc,dvasc,sex]=["cha_ic","cha_has","cha_idade","cha_dm","cha_avc","cha_dvasc","cha_sex"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
+  const{score:sc,msg,col}=RechCalc.chaVascScore({ic,has,idade,dm,avc,dvasc,sex});
   cSet("cha",`CHA₂DS₂-VASc: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 function hasbledCalc(){
-  const sc=["hb_has","hb_renal","hb_hepato","hb_avc","hb_sang","hb_labil","hb_idade","hb_drug"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;}).reduce((a,b)=>a+b,0);
-  let msg="",col="#34d399";
-  if(sc>=3){msg="HAS-BLED ≥3: alto risco de sangramento. Não contraindica anticoagulação, mas requer correção de fatores modificáveis e monitorização rigorosa.";col="#f87171";}
-  else{msg="HAS-BLED <3: risco moderado/baixo.";}
+  const[has,renal,hepato,avc,sang,labil,idade,drug]=["hb_has","hb_renal","hb_hepato","hb_avc","hb_sang","hb_labil","hb_idade","hb_drug"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
+  const{score:sc,msg,col}=RechCalc.hasbledScore({has,renal,hepato,avc,sang,labil,idade,drug});
   cSet("hasbled",`HAS-BLED: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 
@@ -720,10 +690,8 @@ function wellsCalc(){
   cSet("wells",`Wells TEP: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 function spesiCalc(){
-  const sc=["sp_idade","sp_neo","sp_card","sp_fc","sp_pas","sp_sat"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;}).reduce((a,b)=>a+b,0);
-  let msg="",col="#34d399";
-  if(sc===0){msg="sPESI 0: baixo risco (mortalidade 30d ~1%). Considerar alta precoce/tratamento domiciliar em selecionados.";col="#34d399";}
-  else{msg=`sPESI ${sc}: alto risco (mortalidade 30d ~10%). Internação e monitorização necessárias.`;col="#f87171";}
+  const[idade,neo,card,fc,pas,sat]=["sp_idade","sp_neo","sp_card","sp_fc","sp_pas","sp_sat"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
+  const{score:sc,msg,col}=RechCalc.spesiScore({idade,neo,card,fc,pas,sat});
   cSet("spesi",`sPESI: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 
@@ -1049,39 +1017,29 @@ Basear em diretrizes: ATS/IDSA, ESCMID, ANVISA/AMIB quando aplicável. Citar gra
 function agCalcFull(){
   const na=cN("na"),cl=cN("cl"),hco3=cN("hco3"),alb=cN("alb"),lac=cN("ag_lac"),ph=cN("ag_ph"),paco2=cN("ag_paco2");
   if(isNaN(na)||isNaN(cl)||isNaN(hco3)){cSet("ag","<span style='color:#4a7a4a'>Preencha Na⁺, Cl⁻ e HCO₃⁻.</span>");return;}
-  const ag=na-cl-hco3;
-  const agCorr=isNaN(alb)?ag:ag+2.5*(4.0-alb);
+  const{ag,agCorr}=RechCalc.anionGapCore(na,cl,hco3,alb);
   let out="";
 
   // AG interpretation
-  let agCol="#34d399",agMsg="";
-  if(agCorr>20){agCol="#f87171";agMsg="AG muito elevado — causa grave (lactato, cetose, uremia, intoxicação)";}
-  else if(agCorr>12){agCol="#fbbf24";agMsg="AG elevado — MUDPILES: Metanol, Uremia, DKA, Propileno, INH/Fe, Lactato, Etilenoglicol, Salicilato";}
-  else{agMsg="AG normal — acidose hiperclorêmica (diarreia, ATR, SF, ureterossigmoidostomia)";}
+  const{msg:agMsg,col:agCol}=RechCalc.classifyAnionGapFull(agCorr);
   out+=`<div style="margin-bottom:6px">AG: ${cFmt(ag,"mEq/L")} ${!isNaN(alb)?`| AG corrigido: ${cFmt(agCorr,"mEq/L")}`:"— sem albumina"}${cAlrt(agMsg,agCol)}</div>`;
 
   // Delta ratio if AG elevated
   if(agCorr>12){
-    const dAG=agCorr-12,dHCO3=24-hco3,ratio=dAG/Math.max(dHCO3,0.1);
-    let drMsg="";
-    if(ratio<0.4)drMsg="Acidose hiperclorêmica pura ou coexistente";
-    else if(ratio<1.0)drMsg="Acidose mista: AG elevado + hiperclorêmica";
-    else if(ratio<=2.0)drMsg="Acidose metabólica com AG pura";
-    else drMsg="⚠️ Alcalose metabólica oculta coexistente — checar se HCO3 esperado > HCO3 medido";
-    out+=`<div style="margin-top:6px">Delta ratio: ${cFmt(ratio,"",2)} ${cAlrt(drMsg,ratio>2?"#f87171":"#c084fc")}</div>`;
+    const{ratio,msg:drMsg,col:drCol}=RechCalc.deltaRatioFull(agCorr,hco3);
+    out+=`<div style="margin-top:6px">Delta ratio: ${cFmt(ratio,"",2)} ${cAlrt(drMsg,drCol)}</div>`;
   }
 
   // pH / PaCO2 if provided
   if(!isNaN(ph)&&!isNaN(paco2)){
-    const ph_exp=7.4+(hco3-24)*0.015;
-    const paco2_exp=1.5*hco3+8;
-    const compOK=Math.abs(paco2-paco2_exp)<=2;
+    const{paco2Exp:paco2_exp,compOK}=RechCalc.wintersFormula(hco3,paco2);
     out+=`<div style="margin-top:6px">${cAlrt(`PaCO₂ esperada (Winter): ${paco2_exp.toFixed(1)} mmHg | Medida: ${paco2} mmHg — ${compOK?"✅ Compensação respiratória adequada":"⚠️ Distúrbio respiratório coexistente (checar acidose/alcalose respiratória)"}`,"#60a5fa")}</div>`;
   }
 
   // Lactate if provided
   if(!isNaN(lac)){
-    out+=`<div style="margin-top:6px">${cAlrt(lac>4?"⚠️ Lactato muito elevado (>4) — hipoperfusão grave, hepatopatia ou intoxicação. Tratar causa, reavaliar em 2h":lac>2?"⚠️ Lactato elevado (2-4 mmol/L) — hipoperfusão moderada. Investigar causa, reavaliação precoce":"✅ Lactato ≤ 2 mmol/L",lac>4?"#f87171":lac>2?"#fbbf24":"#34d399")}</div>`;
+    const{msg:lacMsg,col:lacCol}=RechCalc.classifyLactate(lac);
+    out+=`<div style="margin-top:6px">${cAlrt(lacMsg,lacCol)}</div>`;
   }
 
   // Clinical context warning
@@ -1496,44 +1454,30 @@ function vmCalc(){
   const pp=g("vm_pp"),peep=g("vm_peep"),vt=g("vm_vt"),peso=window.vmPBW||NaN;
   let dRes="";
   if(!isNaN(pp)&&!isNaN(peep)){
-    const dp=pp-peep;
-    let cor="#34d399",msg="";
-    if(dp>15){cor="#f87171";msg=vmAlert("⚠️ DP > 15 cmH₂O — gatilho de revisão (Amato 2015). Avaliar: Vt, PEEP total, auto-PEEP, parede torácica. Confiável APENAS em paciente passivo.","#f87171");}
-    else if(dp>13){cor="#fbbf24";msg=vmAlert("⚠️ DP 13-15 cmH₂O — zona de atenção. Interpretar com Pplat, complacência e contexto clínico.");}
-    else{msg=vmAlert("✅ DP ≤ 13 cmH₂O. Meta favorável — manter contexto clínico. Só válido em modo controlado/passivo.","#34d399");}
-    dRes+=`<div>Driving Pressure: ${vmFmt(dp,"cmH₂O")} ${msg}</div>`;
+    const dp=RechCalc.drivingPressure(pp,peep);
+    const{msg,col}=RechCalc.classifyDPVentilacao(dp);
+    dRes+=`<div>Driving Pressure: ${vmFmt(dp,"cmH₂O")} ${vmAlert(msg,col)}</div>`;
   }
   if(!isNaN(pp)&&!isNaN(peep)&&!isNaN(vt)&&vt>0){
-    const cst=(vt)/(pp-peep);
-    let cmsg="";
-    if(cst<30)cmsg=vmAlert("⚠️ Cst < 30 mL/cmH₂O — pulmão muito rígido. Suspeitar SDRA grave, atelectasia, pneumotórax, derrame.","#f87171");
-    else if(cst<50)cmsg=vmAlert("⚠️ Cst reduzida (30-50). SDRA leve-moderada ou doença restritiva.");
-    else cmsg=vmAlert("✅ Cst normal (> 50 mL/cmH₂O).","#34d399");
-    dRes+=`<div style="margin-top:6px">Compliance estática: ${vmFmt(cst,"mL/cmH₂O")} ${cmsg}</div>`;
+    const cst=RechCalc.staticCompliance(vt,pp,peep);
+    const{msg:cmsg,col:cstCol}=RechCalc.classifyComplianceVentilacao(cst);
+    dRes+=`<div style="margin-top:6px">Compliance estática: ${vmFmt(cst,"mL/cmH₂O")} ${vmAlert(cmsg,cstCol)}</div>`;
     if(!isNaN(peso)&&peso>0){
       const vtkg=RechCalc.calcVtPerKgPBW(vt,peso);
-      let vmsg="";
-      if(vtkg>8)vmsg=vmAlert("⚠️ Vt/kg > 8 mL/kg PBW — acima do alvo protetor. Em SDRA: reduzir para 4-6 mL/kg. Vt alto aumenta risco, mas VILI depende também de Pplat, DP e mecânica.","#f87171");
-      else if(vtkg>6)vmsg=vmAlert("⚠️ Vt/kg 6-8. Aceitável em pulmão não-SDRA. Em SDRA: reduzir.","#fbbf24");
-      else vmsg=vmAlert("✅ Vt/kg ≤ 6 mL/kg PBW — meta protetora ARDSNet.","#34d399");
-      dRes+=`<div style="margin-top:6px">Vt/kg PBW: ${vmFmt(vtkg,"mL/kg")} ${vmsg}</div>`;
+      const{msg:vmsg,col:vtCol}=RechCalc.classifyVtKgVentilacao(vtkg);
+      dRes+=`<div style="margin-top:6px">Vt/kg PBW: ${vmFmt(vtkg,"mL/kg")} ${vmAlert(vmsg,vtCol)}</div>`;
     }
   }
   const p01=g("vm_p01");
   if(!isNaN(p01)){
-    let pmsg="";
-    if(p01>3.5)pmsg=vmAlert("⚠️ P0.1 > 3.5 cmH₂O — drive alto. Risco P-SILI. Considerar sedação/bloqueio.","#f87171");
-    else if(p01<0.5)pmsg=vmAlert("⚠️ P0.1 < 0.5 — drive baixo. Avaliar sobressedação vs fadiga.");
-    else pmsg=vmAlert("✅ P0.1 0.5–3.5 cmH₂O — zona segura.","#34d399");
-    dRes+=`<div style="margin-top:6px">P0.1: ${vmFmt(p01,"cmH₂O")} ${pmsg}</div>`;
+    const{msg:pmsg,col:p01Col}=RechCalc.classifyP01Ventilacao(p01);
+    dRes+=`<div style="margin-top:6px">P0.1: ${vmFmt(p01,"cmH₂O")} ${vmAlert(pmsg,p01Col)}</div>`;
   }
   const fr=g("vm_fr"),vtsp=g("vm_vtsp");
   if(!isNaN(fr)&&!isNaN(vtsp)&&vtsp>0){
-    const tobin=fr/(vtsp/1000);
-    let tmsg="";
-    if(tobin>105)tmsg=vmAlert("⚠️ Tobin > 105 — alta probabilidade de falha de desmame.","#f87171");
-    else tmsg=vmAlert("✅ Tobin ≤ 105 — favorável ao desmame (Yang & Tobin, 1991).","#34d399");
-    dRes+=`<div style="margin-top:6px">Índice de Tobin (f/Vt): ${vmFmt(tobin,"ipm/L",0)} ${tmsg}</div>`;
+    const tobin=RechCalc.tobinIndex(fr,vtsp);
+    const{msg:tmsg,col:tobinCol}=RechCalc.classifyTobinVentilacao(tobin);
+    dRes+=`<div style="margin-top:6px">Índice de Tobin (f/Vt): ${vmFmt(tobin,"ipm/L",0)} ${vmAlert(tmsg,tobinCol)}</div>`;
   }
   vmSet("vm_calc_res", dRes||`<span style="color:#4a7a4a">Preencha os campos acima para calcular.</span>`);
 }
