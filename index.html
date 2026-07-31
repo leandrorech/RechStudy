@@ -150,6 +150,7 @@ input[type=text]:focus{border-color:#166534}
 <div id="main"></div>
 </div>
 
+<script src="calc.js"></script>
 <script>
 window.onerror = function(msg, src, line, col, err) {
   document.body.innerHTML += '<div style="position:fixed;top:0;left:0;right:0;background:#7f1d1d;color:#fca5a5;padding:10px;font-size:12px;z-index:9999;font-family:monospace">JS ERROR: '+msg+' (line '+line+')</div>';
@@ -639,13 +640,7 @@ function calcRenal(){
 function renalCalc(){
   const cr=cN("cr_cr"),idade=cN("cr_idade"),peso=cN("cr_peso"),sex=cV("cr_sex");
   if(isNaN(cr)||isNaN(idade)||isNaN(peso)){cSet("renal","<span style='color:#4a7a4a'>Preencha todos os campos.</span>");return;}
-  const clcr=((140-idade)*peso)/(72*cr)*(sex==="F"?0.85:1);
-  let estadio="",col="#34d399",kdigo="";
-  if(clcr>=90){estadio="G1 — Normal ou ↑";col="#34d399";}
-  else if(clcr>=60){estadio="G2 — Leve";col="#34d399";}
-  else if(clcr>=30){estadio="G3 — Moderado";col="#fbbf24";}
-  else if(clcr>=15){estadio="G4 — Grave";col="#f87171";}
-  else{estadio="G5 — Falência/Diálise";col="#f87171";}
+  const{clcr,estadio,col}=RechCalc.calcCockcroftGault({cr,idade,peso,sex});
   cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" (KDIGO 2012)",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
 }
 
@@ -720,11 +715,8 @@ function calcTEP(){
   </div>`;
 }
 function wellsCalc(){
-  const sc=["w_tvp","w_alt_dx","w_fc","w_imo","w_tep_tvp","w_hem","w_neo"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseFloat(el.value):0;}).reduce((a,b)=>a+b,0);
-  let msg="",col="#34d399";
-  if(sc>6){msg="Probabilidade ALTA (>6): TC-AP diretamente sem aguardar D-dímero.";col="#f87171";}
-  else if(sc>=2){msg="Probabilidade INTERMEDIÁRIA (2-6): D-dímero; se positivo → TC-AP.";col="#fbbf24";}
-  else{msg="Probabilidade BAIXA (<2): D-dímero; se negativo → exclui TEP com alta sensibilidade.";}
+  const[tvp,altDx,fc,imo,tepTvp,hem,neo]=["w_tvp","w_alt_dx","w_fc","w_imo","w_tep_tvp","w_hem","w_neo"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseFloat(el.value):0;});
+  const{score:sc,msg,col}=RechCalc.wellsScorePE({tvp,altDx,fc,imo,tepTvp,hem,neo});
   cSet("wells",`Wells TEP: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 function spesiCalc(){
@@ -1495,8 +1487,7 @@ function vmAlert(txt,color="#fbbf24"){return `<div style="padding:6px 10px;borde
 function vmCalcPBW(){
   if(!window.vmSex)window.vmSex='M';
   const h=parseFloat(document.getElementById("vm_altura")?.value||"");
-  const pbw=isNaN(h)?NaN:(window.vmSex==='M'?50+0.91*(h-152.4):45.5+0.91*(h-152.4));
-  window.vmPBW=isNaN(pbw)?NaN:Math.max(pbw,0);
+  window.vmPBW=RechCalc.calcPBW(window.vmSex,h);
   const el=document.getElementById("vm_pbw_display");
   if(el)el.textContent=isNaN(window.vmPBW)?"— kg":window.vmPBW.toFixed(1)+" kg";
   vmCalc();
@@ -1520,7 +1511,7 @@ function vmCalc(){
     else cmsg=vmAlert("✅ Cst normal (> 50 mL/cmH₂O).","#34d399");
     dRes+=`<div style="margin-top:6px">Compliance estática: ${vmFmt(cst,"mL/cmH₂O")} ${cmsg}</div>`;
     if(!isNaN(peso)&&peso>0){
-      const vtkg=vt/peso;
+      const vtkg=RechCalc.calcVtPerKgPBW(vt,peso);
       let vmsg="";
       if(vtkg>8)vmsg=vmAlert("⚠️ Vt/kg > 8 mL/kg PBW — acima do alvo protetor. Em SDRA: reduzir para 4-6 mL/kg. Vt alto aumenta risco, mas VILI depende também de Pplat, DP e mecânica.","#f87171");
       else if(vtkg>6)vmsg=vmAlert("⚠️ Vt/kg 6-8. Aceitável em pulmão não-SDRA. Em SDRA: reduzir.","#fbbf24");
