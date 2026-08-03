@@ -29,10 +29,44 @@ function extractFunctionSource(name) {
   return html.slice(start, i);
 }
 
+// Same idea as extractFunctionSource, but for `const name=(...)=>{...};`
+// arrow-function assignments (e.g. svFC, svSS, svR).
+function extractConstSource(name) {
+  const marker = `const ${name}=`;
+  const start = html.indexOf(marker);
+  if (start === -1) throw new Error(`const ${name} not found in index.html`);
+  const braceStart = html.indexOf("{", start);
+  let depth = 0;
+  let i = braceStart;
+  for (; i < html.length; i++) {
+    if (html[i] === "{") depth++;
+    else if (html[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        i++;
+        break;
+      }
+    }
+  }
+  // include trailing ';' if present
+  if (html[i] === ";") i++;
+  return html.slice(start, i);
+}
+
 // Evaluates the named functions from index.html against the given jsdom
 // `window`/`document`, returning an object exposing each requested name.
 export function loadIndexHtmlFunctions(names) {
   const source = names.map(extractFunctionSource).join("\n\n");
+  const body = `${source}\nreturn { ${names.join(", ")} };`;
+  // eslint-disable-next-line no-new-func
+  const factory = new Function("window", "document", body);
+  return factory(window, document);
+}
+
+// Same as loadIndexHtmlFunctions, but for top-level `const name=(...)=>{...}`
+// arrow-function bindings.
+export function loadIndexHtmlConsts(names) {
+  const source = names.map(extractConstSource).join("\n\n");
   const body = `${source}\nreturn { ${names.join(", ")} };`;
   // eslint-disable-next-line no-new-func
   const factory = new Function("window", "document", body);

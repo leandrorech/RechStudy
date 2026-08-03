@@ -1076,6 +1076,15 @@ function newRun(){ _runCounter++; _activeRun = _runCounter; return _runCounter; 
 function isRunActive(id){ return _activeRun === id; }
 function cancelPendingRuns(){ _runCounter++; _activeRun = _runCounter; }
 // ─────────────────────────────────────────────────────
+function parseJ(r){
+  const s=(r||"").replace(/```json/gi,"").replace(/```/g,"").trim();
+  const start=s.indexOf("["),end=s.lastIndexOf("]");
+  if(start===-1||end===-1||end<start)throw new Error("JSON inválido na resposta.");
+  return JSON.parse(s.slice(start,end+1));
+}
+function parseFC(r){
+  return parseJ(r).map(c=>({frente:c.f||"",verso:c.v||"",mecanismo:c.m||"",armadilha:c.a||"",guideline:c.g||"",dificuldade:c.d||""}));
+}
 function addSS(tipo, content){
   if(!S.sess) S.sess=[];
   S.sess.unshift({tipo, content, tema:S.tema||"", nivel:S.nivel||"", data:new Date().toISOString().slice(0,16).replace("T"," ")});
@@ -1178,8 +1187,9 @@ function rP(){
   return`<div class="cpanel"><div class="rhdr"><div><div class="rtag">🎯 Pontos-chave · ${esc(S.nivel)}</div><div style="font-size:14px;font-weight:500">${esc(S.tema)}</div></div><div style="display:flex;gap:4px"><button class="btn-sm" onclick="navigator.clipboard?.writeText(S.resultP)">📋</button><button class="btn-dl" onclick="dl(S.resultP,'pt_${nf(S.tema)}.md','text/markdown')">↓.md</button><button class="btn-dl" onclick="dl(S.resultP,'pt_${nf(S.tema)}.txt','text/plain')">↓.txt</button></div></div><div class="content">${mdR(S.resultP)}</div></div>`;
 }
 function rFC(){
-  const all=S.fc;const fil=S.fcf==="todos"?all:S.fcf==="hoje"?all.filter(c=>c._next&&c._next<=td):S.fcf==="pendente"?all.filter(c=>!c._st):all.filter(c=>c._st===S.fcf);
-  const td=new Date().toISOString().slice(0,10);const st={t:all.length,hj:all.filter(c=>c._next&&c._next<=td).length,p:all.filter(c=>!c._st).length,f:all.filter(c=>c._st==="facil").length,d:all.filter(c=>c._st==="dificil").length,e:all.filter(c=>c._st==="errei").length};
+  const all=S.fc;const td=new Date().toISOString().slice(0,10);
+  const fil=S.fcf==="todos"?all:S.fcf==="hoje"?all.filter(c=>c._next&&c._next<=td):S.fcf==="pendente"?all.filter(c=>!c._st):all.filter(c=>c._st===S.fcf);
+  const st={t:all.length,hj:all.filter(c=>c._next&&c._next<=td).length,p:all.filter(c=>!c._st).length,f:all.filter(c=>c._st==="facil").length,d:all.filter(c=>c._st==="dificil").length,e:all.filter(c=>c._st==="errei").length};
   const idx=Math.min(S.fci,Math.max(fil.length-1,0)),card=fil[idx];
   let h=`<div class="cpanel"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:13px;font-weight:500">Flashcards <span style="color:#7aab7a;font-size:11px;font-weight:400">(${all.length}) · 2 por geração</span></div>${all.length?`<button class="btn-sm" style="color:#f87171;border-color:#7f1d1d" onclick="if(confirm('Limpar tudo?')){S.fc=[];svFC();document.getElementById('main').innerHTML=rFC()}">Limpar</button>`:""}</div>
   <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:8px">${[["todos","Todos",st.t,"#7aab7a"],["hoje","Revisar Hoje",st.hj,"#c084fc"],["pendente","Pendentes",st.p,"#7aab7a"],["facil","Fácil",st.f,"#86efac"],["dificil","Difícil",st.d,"#fbbf24"],["errei","Errei",st.e,"#f87171"]].map(([k,l,n,c])=>`<button style="padding:2px 8px;border-radius:20px;border:0.5px solid ${S.fcf===k?"#1a4d2a":"#173d1f"};font-size:11px;cursor:pointer;background:${S.fcf===k?"#112916":"transparent"};color:${c}" onclick="S.fcf='${k}';S.fci=0;S.fcfl=false;S.fcm=false;document.getElementById('main').innerHTML=rFC()">${l} <strong>${n}</strong></button>`).join("")}</div>`;
@@ -1294,7 +1304,7 @@ function rHist(){
   let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:13px;font-weight:500">Histórico <span style="color:#7aab7a;font-size:11px;font-weight:400">(${S.sess.length}/20)</span></div><button class="btn-sm" style="color:#f87171;border-color:#7f1d1d" onclick="if(confirm('Limpar?')){S.sess=[];svSS();document.getElementById('main').innerHTML=rHist()}">Limpar</button></div>`;
   S.sess.forEach((s,i)=>{
     const open=S.ho[i];
-    h+=`<div class="hi"><div class="hh"><div><span style="font-size:10px;text-transform:uppercase;color:#86efac;margin-right:5px">${s.tipo}</span><span style="font-size:13px;font-weight:500">${esc(s.tema)}</span><div style="font-size:10px;color:#7aab7a;margin-top:1px">${s.nivel} · ${s.ts}</div></div><div style="display:flex;gap:3px"><button class="btn-sm" onclick="navigator.clipboard?.writeText(S.sess[${i}].content)">📋</button><button class="btn-dl" onclick="dl(S.sess[${i}].content,'h${i}.md','text/markdown')">↓.md</button><button class="btn-dl" onclick="dl(S.sess[${i}].content,'h${i}.txt','text/plain')">↓.txt</button></div></div>
+    h+=`<div class="hi"><div class="hh"><div><span style="font-size:10px;text-transform:uppercase;color:#86efac;margin-right:5px">${s.tipo}</span><span style="font-size:13px;font-weight:500">${esc(s.tema)}</span><div style="font-size:10px;color:#7aab7a;margin-top:1px">${s.nivel} · ${s.data||s.ts||""}</div></div><div style="display:flex;gap:3px"><button class="btn-sm" onclick="navigator.clipboard?.writeText(S.sess[${i}].content)">📋</button><button class="btn-dl" onclick="dl(S.sess[${i}].content,'h${i}.md','text/markdown')">↓.md</button><button class="btn-dl" onclick="dl(S.sess[${i}].content,'h${i}.txt','text/plain')">↓.txt</button></div></div>
       <button style="width:100%;padding:4px 12px;font-size:11px;color:#7aab7a;cursor:pointer;background:#0b0f0b;border:none;border-top:0.5px solid #173d1f;text-align:left" onclick="S.ho[${i}]=!S.ho[${i}];document.getElementById('main').innerHTML=rHist()">${open?"▾":"▸"} Ver conteúdo</button>
       ${open?`<div style="padding:10px 12px;max-height:260px;overflow-y:auto;border-top:0.5px solid #173d1f"><div class="content">${mdR(s.content)}</div></div>`:""}
     </div>`;
