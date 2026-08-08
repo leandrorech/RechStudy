@@ -118,6 +118,14 @@ describe("renalCalc() DOM wrapper", () => {
     expect(html).toContain("Creatinina deve ser maior que zero");
     expect(html).not.toContain("Infinity");
   });
+
+  it("shows the same invalid-creatinine message for a negative cr", () => {
+    setupRenalDom({ cr: -1, idade: 40, peso: 70, sex: "M" });
+    expect(() => renalCalc()).not.toThrow();
+    const html = document.getElementById("cr_renal").innerHTML;
+    expect(html).toContain("Creatinina deve ser maior que zero");
+    expect(html).not.toContain("Infinity");
+  });
 });
 
 describe("vmCalcPBW() + vmCalc() DOM wrappers", () => {
