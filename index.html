@@ -615,6 +615,7 @@ function calcRenal(){
 function renalCalc(){
   const cr=cN("cr_cr"),idade=cN("cr_idade"),peso=cN("cr_peso"),sex=cV("cr_sex");
   if(isNaN(cr)||isNaN(idade)||isNaN(peso)){cSet("renal","<span style='color:#4a7a4a'>Preencha todos os campos.</span>");return;}
+  if(cr<=0){cSet("renal","<span style='color:#4a7a4a'>Creatinina deve ser maior que zero.</span>");return;}
   const{clcr,estadio,col}=RechCalc.calcCockcroftGault({cr,idade,peso,sex});
   cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" (KDIGO 2012)",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
 }

@@ -82,10 +82,15 @@
   // through every `>=` comparison (all false against NaN) straight to the
   // final `else`, silently reporting "G5 — Falência/Diálise" — the most
   // severe stage — for missing/invalid data instead of signaling "no data".
+  //
+  // Fix (approved): cr === 0 isn't NaN — it's a division by zero, so clcr
+  // becomes Infinity, which passes the `>= 90` check and used to report
+  // "G1 — Normal ou ↑" (green) for a creatinine of zero, the opposite of a
+  // safe default. Checking !isFinite catches both NaN and ±Infinity.
   function calcCockcroftGault(values) {
     const { cr, idade, peso, sex } = values;
     const clcr = ((140 - idade) * peso) / (72 * cr) * (sex === "F" ? 0.85 : 1);
-    if (isNaN(clcr)) {
+    if (!isFinite(clcr)) {
       return { clcr, estadio: "Indeterminado", col: "#4a7a4a" };
     }
     let estadio, col;
