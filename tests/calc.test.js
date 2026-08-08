@@ -122,10 +122,12 @@ describe("wellsScorePE (Wells score for PE — 3-tier variant used in RechStudy)
     expect(r.category).toBe("intermediaria");
   });
 
-  it("propagates NaN through the sum for invalid/missing input, falling into 'baixa' by default comparisons (documented pre-existing behavior, not fixed here)", () => {
+  it("reports 'indeterminado' instead of silently defaulting to 'baixa' when an input is NaN (fixed)", () => {
     const r = wellsScorePE({ ...zero, tvp: NaN });
     expect(r.score).toBeNaN();
-    expect(r.category).toBe("baixa");
+    expect(r.category).toBe("indeterminado");
+    expect(r.msg).toBe("Dados insuficientes para calcular o score.");
+    expect(r.col).toBe("#4a7a4a");
   });
 });
 
@@ -197,9 +199,10 @@ describe("calcCockcroftGault (creatinine clearance + KDIGO staging)", () => {
     expect(r.col).toBe("#f87171");
   });
 
-  it("documents pre-existing behavior: an invalid/NaN creatinine silently falls through to the most severe stage (G5) rather than signaling 'no data' — not fixed here, caller (renalCalc) already guards against this before calling", () => {
+  it("reports 'Indeterminado' instead of silently defaulting to G5 when clcr is NaN (fixed; renalCalc's own isNaN gate already prevents this from being reached via the UI, so this is a safety net for any other/future caller)", () => {
     const r = calcCockcroftGault({ cr: NaN, idade: 40, peso: 70, sex: "M" });
     expect(r.clcr).toBeNaN();
-    expect(r.estadio).toBe("G5 — Falência/Diálise");
+    expect(r.estadio).toBe("Indeterminado");
+    expect(r.col).toBe("#4a7a4a");
   });
 });

@@ -552,7 +552,7 @@ function vmBCalc(){
   const pplat=cN("vm_pplat"),peep=cN("vm_peep"),vt=cN("vm_vt"),h=cN("vm_h");
   const pao2=cN("vm_pao2"),fio2=cN("vm_fio2"),fr=cN("vm_fr"),p01=cN("vm_p01"),vtsp=cN("vm_vtsp");
   let out="";
-  const pbw=isNaN(h)?NaN:(window.vmBSex==="M"?50+0.91*(h-152.4):45.5+0.91*(h-152.4));
+  const pbw=RechCalc.calcPBW(window.vmBSex,h);
   if(!isNaN(pbw))out+=`<div>PBW (${window.vmBSex==="M"?"♂":"♀"} ${isNaN(h)?"?":h}cm): ${cFmt(pbw,"kg")}</div>`;
   if(!isNaN(pplat)&&!isNaN(peep)){
     const dp=RechCalc.drivingPressure(pplat,peep);
@@ -686,7 +686,8 @@ function calcTEP(){
 }
 function wellsCalc(){
   const[tvp,altDx,fc,imo,tepTvp,hem,neo]=["w_tvp","w_alt_dx","w_fc","w_imo","w_tep_tvp","w_hem","w_neo"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseFloat(el.value):0;});
-  const{score:sc,msg,col}=RechCalc.wellsScorePE({tvp,altDx,fc,imo,tepTvp,hem,neo});
+  const{score:sc,category,msg,col}=RechCalc.wellsScorePE({tvp,altDx,fc,imo,tepTvp,hem,neo});
+  if(category==="indeterminado"){cSet("wells",cAlrt(msg,col));return;}
   cSet("wells",`Wells TEP: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 function spesiCalc(){

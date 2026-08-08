@@ -41,6 +41,19 @@
       values.neo,
     ];
     const score = parts.reduce((a, b) => a + b, 0);
+    // Fix (approved): previously an unparseable/missing input made `score`
+    // NaN, and since `NaN > 6` and `NaN >= 2` are both false, this silently
+    // fell into the lowest-risk "baixa" category instead of signaling
+    // missing data. Not reachable via the current UI (selects always carry
+    // valid numeric option values), but a real trap for any future caller.
+    if (isNaN(score)) {
+      return {
+        score,
+        category: "indeterminado",
+        msg: "Dados insuficientes para calcular o score.",
+        col: "#4a7a4a",
+      };
+    }
     let category, msg, col;
     if (score > 6) {
       category = "alta";
@@ -60,12 +73,21 @@
   }
 
   // ---- Cockcroft-Gault creatinine clearance ----
-  // Source: renalCalc() in index.html. Caller is expected to guard against
-  // NaN cr/idade/peso before calling (see index.html's own isNaN gate) —
-  // this function does not re-check, matching the original inline logic.
+  // Source: renalCalc() in index.html. The wrapper already guards against
+  // NaN cr/idade/peso before calling (index.html's own isNaN gate), so this
+  // NaN branch is unreachable from the current UI — it's a safety net for
+  // this function used directly by any future caller.
+  //
+  // Fix (approved): previously an invalid clcr computation (NaN) fell
+  // through every `>=` comparison (all false against NaN) straight to the
+  // final `else`, silently reporting "G5 — Falência/Diálise" — the most
+  // severe stage — for missing/invalid data instead of signaling "no data".
   function calcCockcroftGault(values) {
     const { cr, idade, peso, sex } = values;
     const clcr = ((140 - idade) * peso) / (72 * cr) * (sex === "F" ? 0.85 : 1);
+    if (isNaN(clcr)) {
+      return { clcr, estadio: "Indeterminado", col: "#4a7a4a" };
+    }
     let estadio, col;
     if (clcr >= 90) {
       estadio = "G1 — Normal ou ↑";

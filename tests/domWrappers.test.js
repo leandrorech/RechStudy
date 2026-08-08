@@ -56,6 +56,15 @@ describe("wellsCalc() DOM wrapper", () => {
     expect(html).toContain(">6</strong>");
     expect(html).toContain("INTERMEDIÁRIA");
   });
+
+  it("renders 'dados insuficientes' instead of a NaN score/false classification when an input is unparseable (fixed)", () => {
+    setupWellsDom({ w_tvp: "abc" });
+    wellsCalc();
+    const html = document.getElementById("cr_wells").innerHTML;
+    expect(html).not.toContain("NaN");
+    expect(html).not.toContain("Probabilidade BAIXA");
+    expect(html).toContain("Dados insuficientes");
+  });
 });
 
 describe("renalCalc() DOM wrapper", () => {
@@ -357,6 +366,14 @@ describe("vmBCalc() DOM wrapper (beira-leito panel)", () => {
     expect(html).toContain("Compliance estática");
     expect(html).toContain("Vt/kg PBW");
     expect(html).toContain("meta ARDSNet");
+  });
+
+  it("clamps PBW to 0 instead of showing a negative weight for an unrealistically short height (fixed: now shares RechCalc.calcPBW's clamp instead of its own unclamped inline formula)", () => {
+    setupVmBDom({ h: 50 }); // 50 + 0.91*(50-152.4) = -43.18 pre-fix
+    vmBCalc();
+    const html = document.getElementById("cr_vmb").innerHTML;
+    expect(html).toContain("0.0</strong><span style=\"color:#7aab7a\"> kg</span>");
+    expect(html).not.toContain("-43");
   });
 
   it("renders P/F ratio classification (Berlim 2012) when PaO2/FiO2 are provided", () => {
