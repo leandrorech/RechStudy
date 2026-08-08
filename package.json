@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "RechStudy — test suite pilot (Vitest + jsdom) for pure calculation logic extracted from index.html.",
   "type": "module",
+  "engines": {
+    "node": ">=22.22.2"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
