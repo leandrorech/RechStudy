@@ -205,4 +205,11 @@ describe("calcCockcroftGault (creatinine clearance + KDIGO staging)", () => {
     expect(r.estadio).toBe("Indeterminado");
     expect(r.col).toBe("#4a7a4a");
   });
+
+  it("reports 'Indeterminado' instead of 'G1 — Normal ou ↑' when cr is 0 (division by zero yields Infinity, which used to pass the >=90 check)", () => {
+    const r = calcCockcroftGault({ cr: 0, idade: 40, peso: 70, sex: "M" });
+    expect(r.clcr).toBe(Infinity);
+    expect(r.estadio).toBe("Indeterminado");
+    expect(r.col).toBe("#4a7a4a");
+  });
 });
