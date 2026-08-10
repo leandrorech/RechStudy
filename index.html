@@ -436,7 +436,7 @@ function calcSOFA(){
       ${cSel("sofa_resp","Respiratório (PaO₂/FiO₂)",[["0","≥400 (0pts)"],["1","300-399 (1pt)"],["2","200-299 (2pts)"],["3","100-199 + VM (3pts)"],["4","<100 + VM (4pts)"]],`sofaCalc()`)}
       ${cSel("sofa_coag","Coagulação (Plaquetas)",[["0","≥150k (0pts)"],["1","100-149k (1pt)"],["2","50-99k (2pts)"],["3","20-49k (3pts)"],["4","<20k (4pts)"]],`sofaCalc()`)}
       ${cSel("sofa_figado","Fígado (Bilirrubina)",[["0","<1,2 (0pts)"],["1","1,2-1,9 (1pt)"],["2","2,0-5,9 (2pts)"],["3","6,0-11,9 (3pts)"],["4","≥12 (4pts)"]],`sofaCalc()`)}
-      ${cSel("sofa_cardio","Cardiovascular",[["0","PAM ≥70 (0pts)"],["1","PAM <70 (1pt)"],["2","Dopa ≤5 ou Dobu (2pts)"],["3","Dopa >5 ou Nora ≤0,1 (3pts)"],["4","Dopa >15 ou Nora >0,1 (4pts)"]],`sofaCalc()`)}
+      ${cSel("sofa_cardio","Cardiovascular",[["0","PAM ≥70 (0pts)"],["1","PAM <70 (1pt)"],["2","Dopa ≤5 ou Dobu (2pts)"],["3","Dopa >5 ou Nora ≤0,1 ou Adr ≤0,1 (3pts)"],["4","Dopa >15 ou Nora >0,1 ou Adr >0,1 (4pts)"]],`sofaCalc()`)}
       ${cSel("sofa_neuro","SNC (Glasgow)",[["0","15 (0pts)"],["1","13-14 (1pt)"],["2","10-12 (2pts)"],["3","6-9 (3pts)"],["4","<6 (4pts)"]],`sofaCalc()`)}
       ${cSel("sofa_renal","Renal (Creatinina/Diurese)",[["0","<1,2 (0pts)"],["1","1,2-1,9 (1pt)"],["2","2,0-3,4 (2pts)"],["3","3,5-4,9 ou <500mL/d (3pts)"],["4","≥5 ou <200mL/d (4pts)"]],`sofaCalc()`)}
     </div>
@@ -600,9 +600,9 @@ function calcRenal(){
     <div style="margin-top:10px;font-size:11px;color:#7aab7a;background:#021a06;padding:10px;border-radius:6px;border:1px solid #0d3b18">
       <div style="font-weight:600;margin-bottom:6px">Referência de ajuste por ClCr:</div>
       <table style="width:100%;font-size:10px;border-collapse:collapse">
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Vancomicina</td><td>AUC-guided; ClCr <30: estender intervalo; TRSC: dose reduzida</td></tr>
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Meropeném</td><td>ClCr 26-50: 1g q12h; 10-25: 500mg q12h; <10: 500mg q24h</td></tr>
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Piperacilina-Tazo</td><td>ClCr <20: max 2,25g q8h ou 3,375g q8h</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Vancomicina</td><td>AUC-guided; ClCr <30: estender intervalo; TRSC: dose reduzida; pós-HD: dose suplementar</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Meropeném</td><td>ClCr 26-50: 1g q12h; 10-25: 500mg q12h; <10: 500mg q24h; pós-HD: dose suplementar</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Piperacilina-Tazo</td><td>ClCr 20-40: 2,25g q6h; ClCr <20: 2,25g q8h (3,375g q8h infusão estendida é para ClCr >40, não reduzir p/ renal); pós-HD: dose suplementar</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Heparina não-frac.</td><td>Sem ajuste renal; monitorar TTPA</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Enoxaparina</td><td>ClCr <30: 1mg/kg q24h (anti-Xa)</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Morfina</td><td>ClCr <30: evitar (acúmulo M6G)</td></tr>
@@ -617,7 +617,7 @@ function renalCalc(){
   if(isNaN(cr)||isNaN(idade)||isNaN(peso)){cSet("renal","<span style='color:#4a7a4a'>Preencha todos os campos.</span>");return;}
   if(cr<=0){cSet("renal","<span style='color:#4a7a4a'>Creatinina deve ser maior que zero.</span>");return;}
   const{clcr,estadio,col}=RechCalc.calcCockcroftGault({cr,idade,peso,sex});
-  cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" (KDIGO 2012)",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
+  cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" (faixas KDIGO 2012, ClCr como proxy de TFG)",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
 }
 
 function calcCardio(){
@@ -643,7 +643,8 @@ function calcCardio(){
       ${cSel("hb_sang","Sangramento prévio/anemia",[["0","Não"],["1","Sim"]],"hasbledCalc()")}
       ${cSel("hb_labil","INR lábil",[["0","Não"],["1","Sim"]],"hasbledCalc()")}
       ${cSel("hb_idade","Idade >65",[["0","Não"],["1","Sim"]],"hasbledCalc()")}
-      ${cSel("hb_drug","Drogas/álcool",[["0","Não"],["1","Sim (por cada)"]],"hasbledCalc()")}
+      ${cSel("hb_drug","Uso de drogas (antiplaquetário/AINE)",[["0","Não"],["1","Sim (+1)"]],"hasbledCalc()")}
+      ${cSel("hb_alcool","Uso de álcool (≥8 doses/semana)",[["0","Não"],["1","Sim (+1)"]],"hasbledCalc()")}
     </div>
     ${cRes("hasbled")}
   </div>`;
@@ -654,8 +655,8 @@ function chaCalc(){
   cSet("cha",`CHA₂DS₂-VASc: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 function hasbledCalc(){
-  const[has,renal,hepato,avc,sang,labil,idade,drug]=["hb_has","hb_renal","hb_hepato","hb_avc","hb_sang","hb_labil","hb_idade","hb_drug"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
-  const{score:sc,msg,col}=RechCalc.hasbledScore({has,renal,hepato,avc,sang,labil,idade,drug});
+  const[has,renal,hepato,avc,sang,labil,idade,drug,alcool]=["hb_has","hb_renal","hb_hepato","hb_avc","hb_sang","hb_labil","hb_idade","hb_drug","hb_alcool"].map(id=>{const el=document.getElementById(`c_${id}`);return el?parseInt(el.value):0;});
+  const{score:sc,msg,col}=RechCalc.hasbledScore({has,renal,hepato,avc,sang,labil,idade,drug,alcool});
   cSet("hasbled",`HAS-BLED: <strong style="color:${col};font-size:15px">${sc}</strong> ${cAlrt(msg,col)}`);
 }
 
@@ -1625,7 +1626,7 @@ PASSO 3 — Se hipoxemia refratária
       ["PaCO₂","35-45 mmHg (normocapnia)"],
       ["Vt","6 mL/kg PBW"],
       ["PEEP","5-8 cmH₂O"],
-      ["Temperatura","TTM 32-36°C se coma pós-PCR"]
+      ["Temperatura","TTM 32-36°C, ou normotermia com controle rigoroso de febre ≤37,5°C (TTM2 2021 / ERC-ESICM 2022) se coma pós-PCR"]
     ]}
   ];
 

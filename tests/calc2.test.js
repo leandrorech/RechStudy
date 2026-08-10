@@ -124,6 +124,18 @@ describe("hasbledScore", () => {
     expect(r.score).toBe(2);
     expect(r.col).toBe("#34d399");
   });
+
+  it("scores drug and alcohol as independent +1 criteria, reaching the true max of 9", () => {
+    const r = hasbledScore({
+      has: 1, renal: 1, hepato: 1, avc: 1, sang: 1, labil: 1, idade: 1, drug: 1, alcool: 1,
+    });
+    expect(r.score).toBe(9);
+  });
+
+  it("defaults alcool to 0 for callers that omit it (backward compatible)", () => {
+    const r = hasbledScore({ has: 1, renal: 1, hepato: 1, avc: 0, sang: 0, labil: 0, idade: 0, drug: 0 });
+    expect(r.score).toBe(3);
+  });
 });
 
 describe("spesiScore", () => {
@@ -261,13 +273,17 @@ describe("classifyLactate", () => {
 });
 
 describe("biochemical ratios (ureia/Cr, TGO/TGP, BD/BT)", () => {
-  it("ureia/Cr: classifies exactly 20 as indeterminate, just above as pré-renal", () => {
-    expect(ureiaCreatininaRatio(20, 1).msg).toMatch(/indeterminada/);
-    expect(ureiaCreatininaRatio(20.01, 1).msg).toMatch(/pré-renal/);
+  // Cutoffs are scaled ~2.14x vs. the classic BUN/Cr teaching values (40/20
+  // instead of 20/10) because this app uses serum urea, not blood urea
+  // nitrogen — see the "Fix (approved)" comment on ureiaCreatininaRatio in
+  // calc.js.
+  it("ureia/Cr: classifies exactly 40 as indeterminate, just above as pré-renal", () => {
+    expect(ureiaCreatininaRatio(40, 1).msg).toMatch(/indeterminada/);
+    expect(ureiaCreatininaRatio(40.01, 1).msg).toMatch(/pré-renal/);
   });
 
-  it("ureia/Cr: classifies just below 10 as NTA", () => {
-    expect(ureiaCreatininaRatio(9.99, 1).msg).toMatch(/NTA/);
+  it("ureia/Cr: classifies just below 20 as NTA", () => {
+    expect(ureiaCreatininaRatio(19.99, 1).msg).toMatch(/NTA/);
   });
 
   it("TGO/TGP: classifies exactly 1 as <1 band, just above 1 and exactly 2 as inespecífico (boundary strictly >2)", () => {

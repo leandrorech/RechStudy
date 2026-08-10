@@ -189,6 +189,11 @@
 
   // ---- HAS-BLED ----
   // Source: hasbledCalc() in index.html.
+  // Fix (approved): the "D" criterion of HAS-BLED is Drugs *and* Alcohol,
+  // 1 point each (max 2) — this used to be a single 0/1 field capped at 1,
+  // so a patient with both never scored past 8 instead of the true max of 9.
+  // `values.alcool` defaults to 0 so existing callers that don't pass it
+  // keep their prior score unchanged.
   function hasbledScore(values) {
     const score = [
       values.has,
@@ -199,6 +204,7 @@
       values.labil,
       values.idade,
       values.drug,
+      values.alcool || 0,
     ].reduce((a, b) => a + b, 0);
     let msg, col;
     if (score >= 3) {
@@ -329,17 +335,23 @@
 
   // ---- Biochemical ratios (deltaCalc()) ----
   // Source: deltaCalc()'s ureia/creatinina block (requires cr>0).
+  // Fix (approved): the classic ">20 pré-renal / <10 NTA" cutoffs are for the
+  // BUN/creatinine ratio (blood urea *nitrogen*), not for serum urea itself.
+  // This app takes "ureia sérica" (serum urea, mg/dL — what Brazilian labs
+  // report) directly, and urea's molar mass (60) vs. its nitrogen content
+  // (28) means urea ≈ 2.14× BUN. Applying the BUN cutoffs unscaled to urea
+  // systematically over-calls "pré-renal". Scaled cutoffs: ~40 / ~20.
   function ureiaCreatininaRatio(ur, cr) {
     const ratio = ur / cr;
     let msg, col;
-    if (ratio > 20) {
-      msg = "Ureia/Cr >20 — sugere pré-renal ou sangramento GI alto";
+    if (ratio > 40) {
+      msg = "Ureia/Cr >40 — sugere pré-renal ou sangramento GI alto";
       col = "#fbbf24";
-    } else if (ratio < 10) {
-      msg = "Ureia/Cr <10 — sugere NTA ou doença intrínseca";
+    } else if (ratio < 20) {
+      msg = "Ureia/Cr <20 — sugere NTA ou doença intrínseca";
       col = "#60a5fa";
     } else {
-      msg = "Ureia/Cr 10-20 — zona indeterminada";
+      msg = "Ureia/Cr 20-40 — zona indeterminada";
       col = "#34d399";
     }
     return { ratio, msg, col };

@@ -259,7 +259,7 @@ describe("chaCalc() + hasbledCalc() DOM wrappers", () => {
 
   it("hasbledCalc: renders high-bleeding-risk message at score >=3", () => {
     document.body.innerHTML =
-      ["hb_has", "hb_renal", "hb_hepato", "hb_avc", "hb_sang", "hb_labil", "hb_idade", "hb_drug"]
+      ["hb_has", "hb_renal", "hb_hepato", "hb_avc", "hb_sang", "hb_labil", "hb_idade", "hb_drug", "hb_alcool"]
         .map((id) => `<input id="c_${id}" value="0">`)
         .join("") + `<div id="cr_hasbled"></div>`;
     ["hb_has", "hb_renal", "hb_hepato"].forEach((id) => {
@@ -269,6 +269,19 @@ describe("chaCalc() + hasbledCalc() DOM wrappers", () => {
     const html = document.getElementById("cr_hasbled").innerHTML;
     expect(html).toContain(">3</strong>");
     expect(html).toContain("alto risco de sangramento");
+  });
+
+  it("hasbledCalc: sums drug and alcohol as independent points", () => {
+    document.body.innerHTML =
+      ["hb_has", "hb_renal", "hb_hepato", "hb_avc", "hb_sang", "hb_labil", "hb_idade", "hb_drug", "hb_alcool"]
+        .map((id) => `<input id="c_${id}" value="0">`)
+        .join("") + `<div id="cr_hasbled"></div>`;
+    ["hb_drug", "hb_alcool"].forEach((id) => {
+      document.getElementById(`c_${id}`).value = "1";
+    });
+    hasbledCalc();
+    const html = document.getElementById("cr_hasbled").innerHTML;
+    expect(html).toContain(">2</strong>");
   });
 });
 
