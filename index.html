@@ -600,15 +600,16 @@ function calcRenal(){
     <div style="margin-top:10px;font-size:11px;color:#7aab7a;background:#021a06;padding:10px;border-radius:6px;border:1px solid #0d3b18">
       <div style="font-weight:600;margin-bottom:6px">Referência de ajuste por ClCr:</div>
       <table style="width:100%;font-size:10px;border-collapse:collapse">
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Vancomicina</td><td>AUC-guided; ClCr <30: estender intervalo; TRSC: dose reduzida; pós-HD: dose suplementar</td></tr>
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Meropeném</td><td>ClCr 26-50: 1g q12h; 10-25: 500mg q12h; <10: 500mg q24h; pós-HD: dose suplementar</td></tr>
-        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Piperacilina-Tazo</td><td>ClCr 20-40: 2,25g q6h; ClCr <20: 2,25g q8h (3,375g q8h infusão estendida é para ClCr >40, não reduzir p/ renal); pós-HD: dose suplementar</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Vancomicina</td><td>AUC-guided; ClCr <30: estender intervalo; TRSC: dose reduzida; pós-HD: dose suplementar (redose guiado por nível)</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Meropeném</td><td>ClCr 26-50: 1g q12h; 10-25: 500mg q12h; <10: 500mg q24h; HD/DP: bula considera dados insuficientes para recomendação formal — se usado, seguir protocolo institucional/farmácia clínica</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Pip-Tazo (indicações gerais)</td><td>ClCr 20-40: 2,25g q6h; ClCr <20: 2,25g q8h; HD: 2,25g q12h + 0,75g suplementar pós-sessão</td></tr>
+        <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Pip-Tazo (pneumonia nosocomial)</td><td>ClCr 20-40: 3,375g q6h; ClCr <20: 2,25g q6h; HD: 2,25g q8h + 0,75g suplementar pós-sessão</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Heparina não-frac.</td><td>Sem ajuste renal; monitorar TTPA</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Enoxaparina</td><td>ClCr <30: 1mg/kg q24h (anti-Xa)</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Morfina</td><td>ClCr <30: evitar (acúmulo M6G)</td></tr>
         <tr><td style="color:#7aab7a;padding:2px 6px 2px 0">Gabapentina</td><td>ClCr 30-59: reduzir 50%; <30: reduzir 75%</td></tr>
       </table>
-      <div style="margin-top:4px;font-size:9px;color:#4a7a4a">⚠️ Sempre checar protocolo institucional e bula. Obesos: usar peso ideal ou ajustado.</div>
+      <div style="margin-top:4px;font-size:9px;color:#4a7a4a">⚠️ Doses acima são do labeling padrão (infusão de 30min). Infusão estendida (ex: pip-tazo 3,375-4,5g em 4h) é protocolo institucional PK/PD-guided, não faz parte do labeling — usar só com função renal preservada; em disfunção renal, seguir os regimes da tabela acima. Sempre checar protocolo institucional e bula. Obesos: usar peso ideal ou ajustado.</div>
     </div>
   </div>`;
 }
@@ -617,7 +618,7 @@ function renalCalc(){
   if(isNaN(cr)||isNaN(idade)||isNaN(peso)){cSet("renal","<span style='color:#4a7a4a'>Preencha todos os campos.</span>");return;}
   if(cr<=0){cSet("renal","<span style='color:#4a7a4a'>Creatinina deve ser maior que zero.</span>");return;}
   const{clcr,estadio,col}=RechCalc.calcCockcroftGault({cr,idade,peso,sex});
-  cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" (faixas KDIGO 2012, ClCr como proxy de TFG)",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
+  cSet("renal",`<div>ClCr Cockcroft-Gault: ${cFmt(clcr,"mL/min")}${cAlrt(estadio+" — faixa aproximada de função renal; não equivale a eGFR/estadiamento KDIGO formal",col)}</div>${clcr<30?cAlrt("⚠️ ClCr <30: ajuste necessário para maioria dos antibióticos, anticoagulantes e analgésicos. Ver tabela abaixo.","#f87171"):""}`);
 }
 
 function calcCardio(){
@@ -1626,7 +1627,7 @@ PASSO 3 — Se hipoxemia refratária
       ["PaCO₂","35-45 mmHg (normocapnia)"],
       ["Vt","6 mL/kg PBW"],
       ["PEEP","5-8 cmH₂O"],
-      ["Temperatura","TTM 32-36°C, ou normotermia com controle rigoroso de febre ≤37,5°C (TTM2 2021 / ERC-ESICM 2022) se coma pós-PCR"]
+      ["Temperatura","Se coma pós-PCR: monitorar temperatura central e prevenir ativamente febre (>37,7°C) por ≥72h — ERC-ESICM 2022 considera evidência insuficiente para recomendar a favor ou contra alvo de 32-36°C. TTM2 2021: 33°C não foi superior à normotermia com tratamento precoce da febre"]
     ]}
   ];
 

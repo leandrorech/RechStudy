@@ -345,13 +345,13 @@
     const ratio = ur / cr;
     let msg, col;
     if (ratio > 40) {
-      msg = "Ureia/Cr >40 — sugere pré-renal ou sangramento GI alto";
+      msg = "Ureia/Cr >40 (corte aproximado, convertido de BUN/Cr) — sugere pré-renal ou sangramento GI alto";
       col = "#fbbf24";
     } else if (ratio < 20) {
-      msg = "Ureia/Cr <20 — sugere NTA ou doença intrínseca";
+      msg = "Ureia/Cr <20 (corte aproximado, convertido de BUN/Cr) — sugere NTA ou doença intrínseca";
       col = "#60a5fa";
     } else {
-      msg = "Ureia/Cr 20-40 — zona indeterminada";
+      msg = "Ureia/Cr 20-40 (corte aproximado, convertido de BUN/Cr) — zona indeterminada";
       col = "#34d399";
     }
     return { ratio, msg, col };

@@ -286,6 +286,10 @@ describe("biochemical ratios (ureia/Cr, TGO/TGP, BD/BT)", () => {
     expect(ureiaCreatininaRatio(19.99, 1).msg).toMatch(/NTA/);
   });
 
+  it("ureia/Cr: flags the cutoffs as approximate/converted from BUN-Cr, not a dedicated validated urea score", () => {
+    expect(ureiaCreatininaRatio(50, 1).msg).toMatch(/corte aproximado, convertido de BUN\/Cr/);
+  });
+
   it("TGO/TGP: classifies exactly 1 as <1 band, just above 1 and exactly 2 as inespecífico (boundary strictly >2)", () => {
     expect(tgoTgpRatio(1, 1).msg).toMatch(/hepatite viral/);
     expect(tgoTgpRatio(1.01, 1).msg).toMatch(/inespecífico/);
