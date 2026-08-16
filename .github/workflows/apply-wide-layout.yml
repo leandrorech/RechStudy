@@ -1,0 +1,51 @@
+name: Apply wide desktop layout
+
+on:
+  push:
+    branches:
+      - feat/wide-desktop-layout
+
+permissions:
+  contents: write
+
+jobs:
+  patch-layout:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/wide-desktop-layout
+
+      - name: Patch only the RechStudy shell width
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '.app{max-width:900px;margin:0 auto}'
+          new = '.app{width:100%;max-width:1600px;margin:0 auto}'
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly one layout target, found {count}')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          print('Applied:', new)
+          PY
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.2'
+
+      - name: Run existing tests
+        run: |
+          npm ci
+          npm test
+
+      - name: Remove temporary workflow and commit only final patch
+        run: |
+          rm .github/workflows/apply-wide-layout.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: widen RechStudy desktop layout'
+          git push origin HEAD:feat/wide-desktop-layout
