@@ -21,17 +21,15 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-          pattern = r'\.app\s*\{\s*max-width\s*:\s*900px\s*;\s*margin\s*:\s*0\s+auto\s*;?\s*\}'
-          replacement = '.app{width:100%;max-width:1600px;margin:0 auto}'
-          updated, count = re.subn(pattern, replacement, s, count=1)
+          old = '.app{max-width:900px;margin:0 auto;padding:16px}'
+          new = '.app{width:100%;max-width:1600px;margin:0 auto;padding:16px}'
+          count = s.count(old)
           if count != 1:
-              matches = re.findall(r'\.app\s*\{[^}]*\}', s)
-              raise SystemExit(f'Expected one 900px .app target, found {count}. Existing .app rules: {matches[:5]}')
-          p.write_text(updated, encoding='utf-8')
-          print('Applied:', replacement)
+              raise SystemExit(f'Expected exactly one shell rule, found {count}')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          print('Applied:', new)
           PY
 
       - uses: actions/setup-node@v4
