@@ -149,6 +149,7 @@ input[type=text]:focus{border-color:#166534}
 </div>
 
 <script src="calc.js"></script>
+<script src="json-utils.js"></script>
 <script>
 window.onerror = function(msg, src, line, col, err) {
   document.body.innerHTML += '<div style="position:fixed;top:0;left:0;right:0;background:#7f1d1d;color:#fca5a5;padding:10px;font-size:12px;z-index:9999;font-family:monospace">JS ERROR: '+msg+' (line '+line+')</div>';
@@ -1282,7 +1283,7 @@ async function planejar(){
   const isAdv=S.nivel==="Avançado"||S.nivel==="Expert UTI",k=sk(S.nivel);
   try{
     if(!isAdv){const r=await api(SYS[k],PREV[k](S.tema),"revisao");if(!isRunActive(run))return;S.rconteudos={"_s":r};S.rblocos=[];S.rfase="revisando";svR();addSS("revisao",r);}
-    else{const r=await api("Responda APENAS com JSON array válido. Zero texto. Zero backticks.",PPLAN(S.tema,S.nivel));if(!isRunActive(run))return;const parsed=parseJ(r);S.rblocos=parsed.map((b,i)=>({...b,id:(b.id||`b${i}`).replace(/\s+/g,'_')+'_'+i,idx:i}));S.rconteudos={};S.rativo=null;S.rfase="revisando";svR();}
+    else{const r=await api("Responda APENAS com JSON array válido. Zero texto. Zero backticks.",PPLAN(S.tema,S.nivel));if(!isRunActive(run))return;const parsed=parseJ(r);if(!Array.isArray(parsed))throw new Error("Plano inválido: esperado JSON array.");S.rblocos=parsed.map((b,i)=>({...b,id:(b.id||`b${i}`).replace(/\s+/g,'_')+'_'+i,idx:i}));S.rconteudos={};S.rativo=null;S.rfase="revisando";svR();}
   }catch(ex){S.error="Erro: "+ex.message;S.rfase="config";}
   S.loading=false;document.getElementById("main").innerHTML=rRev();
 }
