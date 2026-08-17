@@ -1,0 +1,45 @@
+name: RechStudy multi-provider
+on:
+  push:
+    branches: [feat/rech-ai-multiprovider]
+permissions:
+  contents: write
+jobs:
+  wire-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire provider scripts
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          marker='''<script src="rech-ai-config.js"></script>\n<script src="rech-ai-ui.js"></script>\n<script src="rech-ai-transport.js"></script>'''
+          if marker not in s:
+              s=s.replace('</body>',marker+'\n</body>',1)
+              p.write_text(s,encoding='utf-8')
+          PY
+      - name: Static contract
+        run: |
+          node --check rech-ai-config.js
+          node --check rech-ai-ui.js
+          node --check rech-ai-transport.js
+          grep -q 'rech-ai-config.js' index.html
+          grep -q 'rech-ai-ui.js' index.html
+          grep -q 'rech-ai-transport.js' index.html
+          grep -q 'src="json-utils.js"' index.html
+          for p in anthropic openai gemini deepseek qwen kimi custom; do grep -q "$p" rech-ai-config.js; done
+          grep -q 'No silent provider fallback\|sem fallback silencioso\|sem fallback' rech-ai-config.js
+      - name: Existing tests
+        run: |
+          npm ci
+          npm test
+      - name: Commit wiring when needed
+        run: |
+          if git diff --quiet -- index.html; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'feat: wire RechStudy multi-provider selector after parseJ hotfix'
+          git push origin HEAD:feat/rech-ai-multiprovider
