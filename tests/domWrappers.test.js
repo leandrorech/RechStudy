@@ -196,7 +196,17 @@ describe("vmCalcPBW() + vmCalc() DOM wrappers", () => {
     vmCalc();
     const html = document.getElementById("vm_calc_res").innerHTML;
     expect(html).toContain("P/F");
-    expect(html).toContain("SDRA Moderada (101-200)");
+    expect(html).toContain("compatível com SDRA moderada (101-200)");
+    expect(html).toContain("se os demais critérios diagnósticos forem atendidos");
+  });
+
+  it("does not claim SDRA compatibility when P/F is in the normal range", () => {
+    setupVmDom({ pao2: 95, fio2: 0.21 }); // P/F ≈ 452, Normal (>300)
+    vmCalc();
+    const html = document.getElementById("vm_calc_res").innerHTML;
+    expect(html).toContain("Faixa de oxigenação normal (&gt;300)");
+    expect(html).toContain("sem critério de SDRA por oxigenação");
+    expect(html).not.toContain("compatível com SDRA");
   });
 });
 

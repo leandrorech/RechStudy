@@ -1336,7 +1336,10 @@ function vmCalc(){
   if(!isNaN(pao2)&&!isNaN(fio2)&&fio2>0){
     const pf=RechCalc.pfRatio(pao2,fio2);
     const{grau,col:pfCol}=RechCalc.classifyPF(pf);
-    dRes+=`<div style="margin-top:6px">P/F: ${vmFmt(pf,"",0)} ${vmAlert("SDRA "+grau+" — Berlim 2012",pfCol)}</div>`;
+    const pfMsg=grau.startsWith("Normal")
+      ?`Faixa de oxigenação ${grau.toLowerCase()} — sem critério de SDRA por oxigenação — Berlim 2012`
+      :`Faixa de oxigenação compatível com SDRA ${grau.toLowerCase()}, se os demais critérios diagnósticos forem atendidos — Berlim 2012`;
+    dRes+=`<div style="margin-top:6px">P/F: ${vmFmt(pf,"",0)} ${vmAlert(pfMsg,pfCol)}</div>`;
   }
   const p01=g("vm_p01");
   if(!isNaN(p01)){
@@ -1388,7 +1391,7 @@ function rVMCalc(){
     </div>
     ${vmRes("vm_calc_res")}
     <div style="margin-top:8px;font-size:10px;color:#4a7a4a">
-      PBW calculado automaticamente. Masc: 50+0,91×(h−152,4) | Fem: 45,5+0,91×(h−152,4). Pplat/DP só válidos em paciente PASSIVO sem esforço ativo. P/F pelo critério de Berlim pressupõe PEEP/CPAP ≥ 5 cmH₂O.
+      PBW calculado automaticamente. Masc: 50+0,91×(h−152,4) | Fem: 45,5+0,91×(h−152,4). Pplat/DP só válidos em paciente PASSIVO sem esforço ativo. P/F isoladamente não estabelece diagnóstico de SDRA. A classificação de gravidade pressupõe que os demais critérios diagnósticos sejam atendidos, incluindo contexto temporal, imagem, origem do edema e suporte ventilatório/PEEP aplicável.
     </div>
   `);
 }
