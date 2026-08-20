@@ -157,7 +157,6 @@ window.onerror = function(msg, src, line, col, err) {
 };
 const TABS=[{id:"revisar",label:"📚 Revisar"},{id:"base",label:"📄 Base Própria"},{id:"questoes",label:"❓ Questões"},{id:"simulado",label:"🏆 Simulado"},{id:"flashcards",label:"🃏 Flashcards"},{id:"pontos",label:"🎯 Pontos-chave"},{id:"vm",label:"🫁 Ventilação"},{id:"caso",label:"🧠 Caso Clínico"},{id:"atb",label:"💉 Antibiótico"},{id:"beialeito",label:"🚑 Beira-leito"},{id:"calc",label:"🧮 Calculadoras"},{id:"revisao_critica",label:"🔬 Revisão Crítica"},{id:"historico",label:"📂 Histórico"}];
 const NIVEIS=["Básico","Intermediário","Avançado","Expert UTI"];
-const MODELS=[{id:"claude-haiku-4-5-20251001",label:"⚡ Haiku 4.5"},{id:"claude-sonnet-4-6",label:"🎯 Sonnet 4.6"},{id:"claude-opus-4-8",label:"🧠 Opus 4.8"}];
 const TOKENS={questoes:1800,simulado:2200,flashcards:800,pontos:1800,bloco:2500,revisao:5000,vm:5000,calc_ai:3000,default:1800};
 const FOCOS=["Fisiopatologia","Diagnóstico","Tratamento","Farmacologia","Escores","DD","Todos"];
 const ESTILOS=["TEMI","Residência","Caso clínico","Múltipla escolha"];
@@ -192,75 +191,6 @@ function baseContext(){
 }
 function baseBadge(){const b=baseStats();return b.active?`<span style="font-size:10px;color:#86efac;border:1px solid #166534;border-radius:12px;padding:2px 7px;background:#052e16">📄 Base ativa · ${b.words} palavras</span>`:`<span style="font-size:10px;color:#7aab7a;border:1px solid #173d1f;border-radius:12px;padding:2px 7px;background:#021a06">📄 Sem base</span>`;}
 
-function getKey(){return localStorage.getItem("rs_apikey")||"";}
-function getKeySession(){return sessionStorage.getItem("rs_apikey_s")||"";}
-function promptKey(){
-  const cur=getKey()||getKeySession();
-  const k=prompt("Cole sua Anthropic API Key (sk-ant-...):\n\nDeixe vazio + OK para apagar.",cur);
-  if(k===null)return;
-  const key=k.trim();
-  if(!key){localStorage.removeItem("rs_apikey");sessionStorage.removeItem("rs_apikey_s");updateKeyStatus();S.error="";render();return;}
-  const perm=confirm("Salvar permanentemente?\nOK = Sim (persiste ao fechar)\nCancelar = Só nesta sessão");
-  if(perm){localStorage.setItem("rs_apikey",key);sessionStorage.removeItem("rs_apikey_s");}
-  else{sessionStorage.setItem("rs_apikey_s",key);localStorage.removeItem("rs_apikey");}
-  updateKeyStatus();S.error="";render();
-}
-function deleteKey(){
-  if(!confirm("Apagar a API Key?"))return;
-  localStorage.removeItem("rs_apikey");sessionStorage.removeItem("rs_apikey_s");
-  updateKeyStatus();render();
-}
-function errMsg(status,body){
-  if(status===401)return"⚠️ API Key inválida — verifique em console.anthropic.com";
-  if(status===429)return"⏳ Rate limit — tentando novamente...";
-  if(status===529)return"🔄 API sobrecarregada — tentando novamente...";
-  if(status===400)return"❌ Parâmetro inválido — "+(body?.error?.message||"verifique modelo/prompt");
-  if(status===413)return"📏 Prompt muito longo";
-  return"Erro HTTP "+status+(body?.error?.message?" — "+body.error.message:"");
-}
-async function api(sys,user,tokensKey="default"){
-  const key=getKey()||getKeySession();
-  if(!key)throw new Error("API Key não configurada — clique em 🔑 API Key");
-  const model=S.model||"claude-sonnet-4-6";
-  const ctx=baseContext();
-  if(ctx){sys=String(sys||"")+ctx;user=`${ctx}\n\n--- [TAREFA DO APP] ---\n${user}`;}
-  const max_tokens=TOKENS[tokensKey]||TOKENS.default;
-  let attempt=0;
-  while(attempt<3){
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),90000);
-    try{
-      const r=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",signal:controller.signal,
-        headers:{"Content-Type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model,max_tokens,system:sys,messages:[{role:"user",content:user}]})
-      });
-      clearTimeout(timer);
-      const d=await r.json().catch(()=>({}));
-      if(!r.ok){
-        if((r.status===429||r.status===529)&&attempt<2){attempt++;await new Promise(res=>setTimeout(res,3500*attempt));continue;}
-        throw new Error(errMsg(r.status,d));
-      }
-      const t=d.content?.map(b=>b.text||"").join("")||"";
-      if(!t)throw new Error("Resposta vazia");
-      return t;
-    }catch(ex){
-      clearTimeout(timer);
-      if(ex.name==="AbortError")throw new Error("⏰ Timeout (90s) — tente novamente ou mude para Haiku.");
-      if(attempt>=2)throw ex;
-      attempt++;
-    }
-  }
-  throw new Error("Falha após 3 tentativas.");
-}
-function updateKeyStatus(){
-  const el=document.getElementById("key-status");
-  if(!el)return;
-  const kp=getKey(),ks=getKeySession();
-  if(kp)el.innerHTML='<span style="color:#34d399">✅ Key</span> <button onclick="deleteKey()" style="padding:1px 5px;border-radius:3px;border:1px solid #7f1d1d;background:transparent;color:#f87171;font-size:9px;cursor:pointer">🗑</button>';
-  else if(ks)el.innerHTML='<span style="color:#fbbf24">🔑 Sessão</span> <button onclick="deleteKey()" style="padding:1px 5px;border-radius:3px;border:1px solid #7f1d1d;background:transparent;color:#f87171;font-size:9px;cursor:pointer">🗑</button>';
-  else el.innerHTML='<span style="color:#f87171">⚠️ Sem key</span>';
-}
 function rBase(){
   const b=baseStats();
   return `<div>
@@ -967,7 +897,7 @@ FOCO: ${a.foco}
 ORIGEM: ${a.origem==="comunitaria"?"Comunitária":a.origem==="hospitalar"?"Hospitalar":a.origem==="uti"?"UTI / alta permanência":"Serviço de saúde associado"}
 RISCO MDR: ${altoRiscoMDR?"ALTO":"BAIXO-MODERADO"}${mdrFatores.length?`\nFatores: ${mdrFatores.join(", ")}`:""}
 ${a.alerg?`ALERGIAS: ${a.alerg}`:""}
-${cr?`CREATININA: ${cr} mg/dL (peso ${peso}kg — ClCr estimado: ${Math.round(((140-60)*peso)/(72*cr))} mL/min aprox)`:""}
+${cr?`CREATININA: ${cr} mg/dL (peso ${peso}kg). Idade do paciente não informada neste formulário — NÃO calcular ClCr por Cockcroft-Gault sem idade real. Considerar função renal potencialmente reduzida e ajustar doses com margem de segurança.`:""}
 ${a.culturas?`MICROBIOLOGIA PRÉVIA:\n${a.culturas}`:""}
 ${a.ctx?`CONTEXTO CLÍNICO:\n${a.ctx}`:""}
 
@@ -980,7 +910,7 @@ Gere resposta estruturada:
 | Droga | Dose | Via | Intervalo | Duração empírica |
 |---|---|---|---|---|
 
-## ⚠️ Ajuste renal${cr?` (ClCr ~${Math.round(((140-60)*peso)/(72*cr))} mL/min)`:""}
+## ⚠️ Ajuste renal${cr?` (creatinina ${cr} mg/dL — ClCr não calculável sem idade real; ajustar com margem de segurança)`:""}
 [Ajuste específico para cada droga quando aplicável]
 
 ## 🔄 Descalonamento
@@ -1090,8 +1020,6 @@ function render(){updateKeyStatus();
   let tlo=document.getElementById('tema-lib-overlay');
   if(!tlo){tlo=document.createElement('div');tlo.id='tema-lib-overlay';document.body.appendChild(tlo);}
   tlo.innerHTML=rTemaLib();
-  const msel=document.getElementById("model-sel-hdr");
-  if(msel)msel.innerHTML=`<select onchange="S.model=this.value" style="padding:3px 6px;border-radius:6px;border:1px solid #0d3b18;background:#021a06;color:#7aab7a;font-size:10px;cursor:pointer">${MODELS.map(m=>`<option value="${m.id}" ${S.model===m.id?"selected":""}>${m.label}</option>`).join("")}</select>`;
   if(S.tab==="revisar"){document.getElementById("cfg").innerHTML="";document.getElementById("main").innerHTML=rRev();}
   else if(S.tab==="base"){document.getElementById("cfg").innerHTML="";document.getElementById("main").innerHTML=rBase();}
   else if(S.tab==="historico"){document.getElementById("cfg").innerHTML="";document.getElementById("main").innerHTML=rHist();}
