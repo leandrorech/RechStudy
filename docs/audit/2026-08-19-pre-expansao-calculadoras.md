@@ -8,6 +8,17 @@ Referente a: [`leandrorech/RechStudy#8`](https://github.com/leandrorech/RechStud
 
 ---
 
+> ## ⚠️ Errata (2026-08-20)
+>
+> O texto original do **FIND-04** (seção 3) e do **Adendo 2** (anexo) descreveu o sentido do erro de Cockcroft-Gault **invertido**. O texto dizia "ClCr superestimado em pacientes mais jovens e subestimado em idosos" — está errado. O correto, apontado pelo dono do produto e confirmado a partir do próprio código (`(140-idade)*peso/(72*cr)` com `idade` sempre fixada em `60`):
+>
+> - paciente **mais jovem** que 60 → `(140-60)` é **menor** que o `(140-idadeReal)` correto → o código **subestima** o ClCr.
+> - paciente **mais idoso** que 60 → `(140-60)` é **maior** que o `(140-idadeReal)` correto → o código **superestima** o ClCr.
+>
+> O risco clínico relevante está no **idoso**: o código pode indicar função renal melhor do que a real, levando a **não reduzir** um fármaco de eliminação renal quando deveria — risco de acúmulo/toxicidade, não o oposto. O texto abaixo foi corrigido nos dois pontos citados; esta nota fica registrada para transparência sobre o erro original. Correção também publicada como comentário na Issue #8.
+
+---
+
 ## 1. Executive summary
 
 O RechStudy funciona e a suíte de `calc.js` está genuinamente bem testada (123 testes, 100% de cobertura de statements/lines/functions). Mas a auditoria confirma, com evidência direta de código (E4), que o app **não está pronto para receber 50–200 calculadoras novas sem mudança estrutural antes**:
@@ -125,15 +136,20 @@ EVIDENCE:
       reutiliza.
 
 PROBLEM / IMPACT: Cockcroft-Gault é altamente sensível à idade
-  ((140-idade)×peso/(72×creatinina)). Assumir 60 anos para todo paciente
-  gera ClCr superestimado em pacientes mais jovens e subestimado em idosos
-  — no extremo, um paciente de 85 anos recebe uma estimativa de função
-  renal como se tivesse 60, o que pode levar a **subdosagem por
-  superestimação de ClCr real** ou a ajustes desnecessários no sentido
-  oposto. O próprio prompt do sistema instrui a IA a "nunca omitir ajuste
-  renal quando creatinina fornecida" (linha 963) — mas o número que
-  alimenta esse ajuste já nasce sistematicamente incorreto para qualquer
-  paciente que não tenha ~60 anos.
+  ((140-idade)×peso/(72×creatinina), decrescente com a idade). Assumir
+  60 anos para todo paciente gera ClCr **subestimado em pacientes mais
+  jovens** (o numerador com idade=60 é menor que o numerador correto) e
+  **superestimado em pacientes mais idosos** (o numerador com idade=60 é
+  maior que o correto) — no extremo, um paciente de 85 anos recebe uma
+  estimativa de função renal como se tivesse 60, ou seja, **melhor do
+  que a real**. O risco clínico relevante está exatamente aí: pode levar
+  a **não reduzir** um fármaco de eliminação renal quando deveria
+  (acúmulo/toxicidade), não a uma subdosagem por excesso de cautela. O
+  próprio prompt do sistema instrui a IA a "nunca omitir ajuste renal
+  quando creatinina fornecida" (linha 963) — mas o número que alimenta
+  esse ajuste já nasce sistematicamente incorreto para qualquer paciente
+  que não tenha ~60 anos, incorreto na direção mais perigosa justamente
+  no idoso.
 
 RELATED INVARIANT: nenhum formalizado ainda.
 CANDIDATE INVARIANT: "Toda estimativa de função renal exibida ao usuário
