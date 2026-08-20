@@ -326,13 +326,12 @@ async function auditarRisco(){
 
 function rCalc(){
   if(!window.calcTab)window.calcTab="sofa";
-  const tabs=[["sofa","SOFA"],["qsofa","qSOFA"],["aniongap","Ânion Gap"],["delta","Delta Ratio"],["beialeito","Beira-leito VM"],["renal","Renal/Dose"],["cardio","Cardio"],["tep","Wells/PESI"]];
+  const tabs=[["sofa","SOFA"],["qsofa","qSOFA"],["aniongap","Ânion Gap"],["delta","Delta Ratio"],["renal","Renal/Dose"],["cardio","Cardio"],["tep","Wells/PESI"]];
   let inner="";
   if(window.calcTab==="sofa")inner=calcSOFA();
   else if(window.calcTab==="qsofa")inner=calcQSOFA();
   else if(window.calcTab==="aniongap")inner=calcAnionGap();
   else if(window.calcTab==="delta")inner=calcDelta();
-  else if(window.calcTab==="beialeito")inner=calcBeiraleito();
   else if(window.calcTab==="renal")inner=calcRenal();
   else if(window.calcTab==="cardio")inner=calcCardio();
   else if(window.calcTab==="tep")inner=calcTEP();
@@ -450,70 +449,6 @@ function deltaCalc(){
   }
   if(!out)out="<span style='color:#4a7a4a'>Preencha os campos para calcular.</span>";
   cSet("delta",out);
-}
-
-function calcBeiraleito(){
-  return `<div style="background:#0c100c;border:1px solid #1a221a;border-radius:8px;padding:14px">
-    <div style="font-size:12px;font-weight:600;color:#34d399;margin-bottom:10px">VM Beira-leito — Cálculos Integrados</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      ${cInp("vm_pplat","Pplat","ex: 25","cmH₂O","vmBCalc()")}
-      ${cInp("vm_peep","PEEP total","ex: 8","cmH₂O","vmBCalc()")}
-      ${cInp("vm_vt","Vt","ex: 420","mL","vmBCalc()")}
-      ${cInp("vm_h","Altura","ex: 175","cm","vmBCalc()")}
-      <div>
-        <span style="font-size:10px;color:#7aab7a;display:block;margin-bottom:4px">Sexo</span>
-        <div style="display:flex;gap:6px">
-          <button onclick="window.vmBSex='M';vmBCalc()" style="padding:4px 12px;border-radius:5px;border:1px solid #173d1f;background:transparent;color:#e8f5e9;font-size:11px;cursor:pointer">♂ M</button>
-          <button onclick="window.vmBSex='F';vmBCalc()" style="padding:4px 12px;border-radius:5px;border:1px solid #173d1f;background:transparent;color:#e8f5e9;font-size:11px;cursor:pointer">♀ F</button>
-        </div>
-      </div>
-      ${cInp("vm_pao2","PaO₂","ex: 75","mmHg","vmBCalc()")}
-      ${cInp("vm_fio2","FiO₂","ex: 0.5","fração","vmBCalc()")}
-      ${cInp("vm_fr","FR","ex: 18","ipm","vmBCalc()")}
-      ${cInp("vm_p01","P0.1","ex: 2.5","cmH₂O","vmBCalc()")}
-      ${cInp("vm_vtsp","Vt espontâneo","ex: 380","mL","vmBCalc()")}
-    </div>
-    ${cRes("vmb")}
-  </div>`;
-}
-function vmBCalc(){
-  if(!window.vmBSex)window.vmBSex="M";
-  const pplat=cN("vm_pplat"),peep=cN("vm_peep"),vt=cN("vm_vt"),h=cN("vm_h");
-  const pao2=cN("vm_pao2"),fio2=cN("vm_fio2"),fr=cN("vm_fr"),p01=cN("vm_p01"),vtsp=cN("vm_vtsp");
-  let out="";
-  const pbw=RechCalc.calcPBW(window.vmBSex,h);
-  if(!isNaN(pbw))out+=`<div>PBW (${window.vmBSex==="M"?"♂":"♀"} ${isNaN(h)?"?":h}cm): ${cFmt(pbw,"kg")}</div>`;
-  if(!isNaN(pplat)&&!isNaN(peep)){
-    const dp=RechCalc.drivingPressure(pplat,peep);
-    const{msg:dpMsg,col}=RechCalc.classifyDPBeiraleito(dp);
-    out+=`<div style="margin-top:6px">Driving Pressure: ${cFmt(dp,"cmH₂O")}${cAlrt(dpMsg,col)}</div>`;
-    if(!isNaN(vt)&&vt>0){
-      const cst=RechCalc.staticCompliance(vt,pplat,peep);
-      const{msg:cstMsg,col:cstCol}=RechCalc.classifyComplianceBeiraleito(cst);
-      out+=`<div style="margin-top:6px">Compliance estática: ${cFmt(cst,"mL/cmH₂O")}${cAlrt(cstMsg,cstCol)}</div>`;
-      if(!isNaN(pbw)&&pbw>0){
-        const vtkg=RechCalc.calcVtPerKgPBW(vt,pbw);
-        const{msg:vtMsg,col:vtCol}=RechCalc.classifyVtKgBeiraleito(vtkg);
-        out+=`<div style="margin-top:6px">Vt/kg PBW: ${cFmt(vtkg,"mL/kg")}${cAlrt(vtMsg,vtCol)}</div>`;
-      }
-    }
-  }
-  if(!isNaN(pao2)&&!isNaN(fio2)&&fio2>0){
-    const pf=RechCalc.pfRatio(pao2,fio2);
-    const{grau,col}=RechCalc.classifyPF(pf);
-    out+=`<div style="margin-top:6px">P/F: ${cFmt(pf,"",0)} ${cAlrt("SDRA "+grau+" — Berlim 2012",col)}</div>`;
-  }
-  if(!isNaN(fr)&&!isNaN(vtsp)&&vtsp>0){
-    const tobin=RechCalc.tobinIndex(fr,vtsp);
-    const{msg:tobinMsg,col:tobinCol}=RechCalc.classifyTobinBeiraleito(tobin);
-    out+=`<div style="margin-top:6px">Índice de Tobin (f/Vt): ${cFmt(tobin,"ipm/L",0)}${cAlrt(tobinMsg,tobinCol)}</div>`;
-  }
-  if(!isNaN(p01)){
-    const{msg:p01Msg,col:p01Col}=RechCalc.classifyP01Beiraleito(p01);
-    out+=`<div style="margin-top:6px">P0.1: ${cFmt(p01,"cmH₂O")}${cAlrt(p01Msg,p01Col)}</div>`;
-  }
-  if(!out)out="<span style='color:#4a7a4a'>Preencha os campos para calcular.</span>";
-  cSet("vmb",out);
 }
 
 function calcRenal(){
@@ -1397,6 +1332,15 @@ function vmCalc(){
       dRes+=`<div style="margin-top:6px">Vt/kg PBW: ${vmFmt(vtkg,"mL/kg")} ${vmAlert(vmsg,vtCol)}</div>`;
     }
   }
+  const pao2=g("vm_pao2"),fio2=g("vm_fio2");
+  if(!isNaN(pao2)&&!isNaN(fio2)&&fio2>0){
+    const pf=RechCalc.pfRatio(pao2,fio2);
+    const{grau,col:pfCol}=RechCalc.classifyPF(pf);
+    const pfMsg=grau.startsWith("Normal")
+      ?`Faixa de oxigenação ${grau.toLowerCase()} — sem critério de SDRA por oxigenação — Berlim 2012`
+      :`Faixa de oxigenação compatível com SDRA ${grau.toLowerCase()}, se os demais critérios diagnósticos forem atendidos — Berlim 2012`;
+    dRes+=`<div style="margin-top:6px">P/F: ${vmFmt(pf,"",0)} ${vmAlert(pfMsg,pfCol)}</div>`;
+  }
   const p01=g("vm_p01");
   if(!isNaN(p01)){
     const{msg:pmsg,col:p01Col}=RechCalc.classifyP01Ventilacao(p01);
@@ -1438,6 +1382,8 @@ function rVMCalc(){
         </div>
       </div>
       <div>
+        ${vmInput("vm_pao2","PaO₂","ex: 75","mmHg")}
+        ${vmInput("vm_fio2","FiO₂","ex: 0.5","fração")}
         ${vmInput("vm_p01","P0.1 (oclusão 100ms)","ex: 2.5","cmH₂O")}
         ${vmInput("vm_fr","FR espontânea (desmame)","ex: 22","ipm")}
         ${vmInput("vm_vtsp","Vt espontâneo (desmame)","ex: 380","mL")}
@@ -1445,7 +1391,7 @@ function rVMCalc(){
     </div>
     ${vmRes("vm_calc_res")}
     <div style="margin-top:8px;font-size:10px;color:#4a7a4a">
-      PBW calculado automaticamente. Masc: 50+0,91×(h−152,4) | Fem: 45,5+0,91×(h−152,4). Pplat/DP só válidos em paciente PASSIVO sem esforço ativo.
+      PBW calculado automaticamente. Masc: 50+0,91×(h−152,4) | Fem: 45,5+0,91×(h−152,4). Pplat/DP só válidos em paciente PASSIVO sem esforço ativo. P/F isoladamente não estabelece diagnóstico de SDRA. A classificação de gravidade pressupõe que os demais critérios diagnósticos sejam atendidos, incluindo contexto temporal, imagem, origem do edema e suporte ventilatório/PEEP aplicável.
     </div>
   `);
 }

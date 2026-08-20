@@ -13,7 +13,7 @@
  */
 (function (global) {
   // ---- Predicted Body Weight (ARDSNet) + Vt/kg PBW ----
-  // Source: vmCalcPBW() / vmBCalc() in index.html.
+  // Source: vmCalcPBW() in index.html.
   function calcPBW(sex, heightCm) {
     if (typeof heightCm !== "number" || isNaN(heightCm)) return NaN;
     const pbw =
@@ -377,10 +377,11 @@
   }
 
   // ---- Mechanical ventilation mechanics ----
-  // Source: vmBCalc() (beira-leito panel) and vmCalc() (VM tab). Both
-  // wrappers compute the same underlying mechanics but render distinct
-  // wording, so each gets its own classify* function to preserve that
-  // wording exactly rather than merging them into one shared message.
+  // Ventilação (rVMCalc()/vmCalc()) is the single canonical VM calculator
+  // screen; the former Beira-leito VM duplicate (calcBeiraleito()/vmBCalc())
+  // and its classify*Beiraleito wording were removed when the two wrappers
+  // were unified. The classify*Ventilacao suffix is kept as-is rather than
+  // renamed, since Ventilação is where these now live.
   function drivingPressure(pMeasured, peep) {
     return pMeasured - peep;
   }
@@ -397,14 +398,6 @@
     return pao2 / fio2;
   }
 
-  // Source: vmBCalc()'s Driving Pressure block.
-  function classifyDPBeiraleito(dp) {
-    if (dp > 15) return { msg: "⚠️ DP >15 — revisar Vt/PEEP (só válido em passivo)", col: "#f87171" };
-    if (dp > 13) return { msg: "⚠️ DP borderline 13-15", col: "#fbbf24" };
-    return { msg: "✅ DP ≤13 cmH₂O", col: "#34d399" };
-  }
-
-  // Source: vmCalc()'s Driving Pressure block.
   function classifyDPVentilacao(dp) {
     if (dp > 15) {
       return {
@@ -418,28 +411,12 @@
     return { msg: "✅ DP ≤ 13 cmH₂O. Meta favorável — manter contexto clínico. Só válido em modo controlado/passivo.", col: "#34d399" };
   }
 
-  // Source: vmBCalc()'s Compliance estática block.
-  function classifyComplianceBeiraleito(cst) {
-    if (cst < 30) return { msg: "⚠️ Cst <30 — muito rígido (SDRA grave, atelectasia, PTX)", col: "#f87171" };
-    if (cst < 50) return { msg: "⚠️ Cst 30-50 — SDRA/restrição", col: "#fbbf24" };
-    return { msg: "✅ Cst normal >50", col: "#34d399" };
-  }
-
-  // Source: vmCalc()'s Compliance estática block.
   function classifyComplianceVentilacao(cst) {
     if (cst < 30) return { msg: "⚠️ Cst < 30 mL/cmH₂O — pulmão muito rígido. Suspeitar SDRA grave, atelectasia, pneumotórax, derrame.", col: "#f87171" };
     if (cst < 50) return { msg: "⚠️ Cst reduzida (30-50). SDRA leve-moderada ou doença restritiva.", col: "#fbbf24" };
     return { msg: "✅ Cst normal (> 50 mL/cmH₂O).", col: "#34d399" };
   }
 
-  // Source: vmBCalc()'s Vt/kg PBW block.
-  function classifyVtKgBeiraleito(vtkg) {
-    if (vtkg > 8) return { msg: "⚠️ >8 mL/kg — acima do alvo protetor. Em SDRA: reduzir para 4-6", col: "#f87171" };
-    if (vtkg > 6) return { msg: "⚠️ 6-8 mL/kg — aceitável em pulmão saudável", col: "#fbbf24" };
-    return { msg: "✅ ≤6 mL/kg PBW — meta ARDSNet", col: "#34d399" };
-  }
-
-  // Source: vmCalc()'s Vt/kg PBW block.
   function classifyVtKgVentilacao(vtkg) {
     if (vtkg > 8) {
       return {
@@ -451,7 +428,7 @@
     return { msg: "✅ Vt/kg ≤ 6 mL/kg PBW — meta protetora ARDSNet.", col: "#34d399" };
   }
 
-  // Source: vmBCalc()'s P/F block (Berlim 2012).
+  // Berlim 2012 P/F severity grading — shared, single implementation.
   function classifyPF(pf) {
     let grau, col;
     if (pf <= 100) {
@@ -470,26 +447,11 @@
     return { grau, col };
   }
 
-  // Source: vmBCalc()'s Índice de Tobin block.
-  function classifyTobinBeiraleito(tobin) {
-    if (tobin > 105) return { msg: "⚠️ >105 — alta prob de falha de desmame (Yang & Tobin 1991)", col: "#f87171" };
-    return { msg: "✅ ≤105 — favorável ao desmame", col: "#34d399" };
-  }
-
-  // Source: vmCalc()'s Índice de Tobin block.
   function classifyTobinVentilacao(tobin) {
     if (tobin > 105) return { msg: "⚠️ Tobin > 105 — alta probabilidade de falha de desmame.", col: "#f87171" };
     return { msg: "✅ Tobin ≤ 105 — favorável ao desmame (Yang & Tobin, 1991).", col: "#34d399" };
   }
 
-  // Source: vmBCalc()'s P0.1 block.
-  function classifyP01Beiraleito(p01) {
-    if (p01 > 3.5) return { msg: "⚠️ >3.5 — drive alto, risco P-SILI. Avaliar sedação/BNM", col: "#f87171" };
-    if (p01 < 0.5) return { msg: "⚠️ <0.5 — drive baixo (sobressedação/fadiga)", col: "#fbbf24" };
-    return { msg: "✅ 0.5-3.5 — zona segura", col: "#34d399" };
-  }
-
-  // Source: vmCalc()'s P0.1 block.
   function classifyP01Ventilacao(p01) {
     if (p01 > 3.5) return { msg: "⚠️ P0.1 > 3.5 cmH₂O — drive alto. Risco P-SILI. Considerar sedação/bloqueio.", col: "#f87171" };
     if (p01 < 0.5) return { msg: "⚠️ P0.1 < 0.5 — drive baixo. Avaliar sobressedação vs fadiga.", col: "#fbbf24" };
@@ -520,16 +482,11 @@
     staticCompliance,
     tobinIndex,
     pfRatio,
-    classifyDPBeiraleito,
     classifyDPVentilacao,
-    classifyComplianceBeiraleito,
     classifyComplianceVentilacao,
-    classifyVtKgBeiraleito,
     classifyVtKgVentilacao,
     classifyPF,
-    classifyTobinBeiraleito,
     classifyTobinVentilacao,
-    classifyP01Beiraleito,
     classifyP01Ventilacao,
   };
   global.RechCalc = api;

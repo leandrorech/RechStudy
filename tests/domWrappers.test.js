@@ -138,13 +138,15 @@ describe("vmCalcPBW() + vmCalc() DOM wrappers", () => {
     "vmCalc",
   ]);
 
-  function setupVmDom({ altura, pp, peep, vt }) {
+  function setupVmDom({ altura, pp, peep, vt, pao2, fio2 } = {}) {
     document.body.innerHTML = `
       <input id="vm_altura" value="${altura ?? ""}">
       <div id="vm_pbw_display"></div>
       <input id="vm_pp" value="${pp ?? ""}">
       <input id="vm_peep" value="${peep ?? ""}">
       <input id="vm_vt" value="${vt ?? ""}">
+      <input id="vm_pao2" value="${pao2 ?? ""}">
+      <input id="vm_fio2" value="${fio2 ?? ""}">
       <input id="vm_p01" value="">
       <input id="vm_fr" value="">
       <input id="vm_vtsp" value="">
@@ -180,6 +182,31 @@ describe("vmCalcPBW() + vmCalc() DOM wrappers", () => {
     expect(document.getElementById("vm_pbw_display").textContent).toBe("— kg");
     const html = document.getElementById("vm_calc_res").innerHTML;
     expect(html).toContain("Preencha os campos acima para calcular");
+  });
+
+  it("clamps PBW to 0 instead of showing a negative weight for an unrealistically short height", () => {
+    setupVmDom({ altura: 50 }); // 50 + 0.91*(50-152.4) = -43.18 unclamped
+    vmCalcPBW();
+    expect(document.getElementById("vm_pbw_display").textContent).toBe("0.0 kg");
+    expect(document.getElementById("vm_pbw_display").textContent).not.toContain("-43");
+  });
+
+  it("renders P/F ratio classification (Berlim 2012) when PaO2/FiO2 are provided (unified from the former Beira-leito VM wrapper)", () => {
+    setupVmDom({ pao2: 90, fio2: 0.6 });
+    vmCalc();
+    const html = document.getElementById("vm_calc_res").innerHTML;
+    expect(html).toContain("P/F");
+    expect(html).toContain("compatível com SDRA moderada (101-200)");
+    expect(html).toContain("se os demais critérios diagnósticos forem atendidos");
+  });
+
+  it("does not claim SDRA compatibility when P/F is in the normal range", () => {
+    setupVmDom({ pao2: 95, fio2: 0.21 }); // P/F ≈ 452, Normal (>300)
+    vmCalc();
+    const html = document.getElementById("vm_calc_res").innerHTML;
+    expect(html).toContain("Faixa de oxigenação normal (&gt;300)");
+    expect(html).toContain("sem critério de SDRA por oxigenação");
+    expect(html).not.toContain("compatível com SDRA");
   });
 });
 
@@ -355,64 +382,14 @@ describe("deltaCalc() DOM wrapper", () => {
   });
 });
 
-describe("vmBCalc() DOM wrapper (beira-leito panel)", () => {
-  const { vmBCalc } = loadIndexHtmlFunctions(["cN", "cV", "cSet", "cAlrt", "cFmt", "vmBCalc"]);
+describe("rCalc() tab list (VM unification)", () => {
+  const { rCalc } = loadIndexHtmlFunctions(["rCalc"]);
 
-  function setupVmBDom({ pplat, peep, vt, h, pao2, fio2, fr, p01, vtsp } = {}) {
-    document.body.innerHTML = `
-      <input id="c_vm_pplat" value="${pplat ?? ""}">
-      <input id="c_vm_peep" value="${peep ?? ""}">
-      <input id="c_vm_vt" value="${vt ?? ""}">
-      <input id="c_vm_h" value="${h ?? ""}">
-      <input id="c_vm_pao2" value="${pao2 ?? ""}">
-      <input id="c_vm_fio2" value="${fio2 ?? ""}">
-      <input id="c_vm_fr" value="${fr ?? ""}">
-      <input id="c_vm_p01" value="${p01 ?? ""}">
-      <input id="c_vm_vtsp" value="${vtsp ?? ""}">
-      <div id="cr_vmb"></div>`;
-    window.vmBSex = "M";
-  }
-
-  it("renders PBW, driving pressure, compliance, and Vt/kg PBW together", () => {
-    setupVmBDom({ pplat: 28, peep: 8, vt: 396, h: 170 });
-    vmBCalc();
-    const html = document.getElementById("cr_vmb").innerHTML;
-    expect(html).toContain("PBW");
-    expect(html).toContain("Driving Pressure");
-    expect(html).toContain("Compliance estática");
-    expect(html).toContain("Vt/kg PBW");
-    expect(html).toContain("meta ARDSNet");
-  });
-
-  it("clamps PBW to 0 instead of showing a negative weight for an unrealistically short height (fixed: now shares RechCalc.calcPBW's clamp instead of its own unclamped inline formula)", () => {
-    setupVmBDom({ h: 50 }); // 50 + 0.91*(50-152.4) = -43.18 pre-fix
-    vmBCalc();
-    const html = document.getElementById("cr_vmb").innerHTML;
-    expect(html).toContain("0.0</strong><span style=\"color:#7aab7a\"> kg</span>");
-    expect(html).not.toContain("-43");
-  });
-
-  it("renders P/F ratio classification (Berlim 2012) when PaO2/FiO2 are provided", () => {
-    setupVmBDom({ pao2: 90, fio2: 0.6 });
-    vmBCalc();
-    const html = document.getElementById("cr_vmb").innerHTML;
-    expect(html).toContain("P/F");
-    expect(html).toContain("SDRA Moderada (101-200)");
-  });
-
-  it("renders the Tobin index and P0.1 with the beira-leito-specific wording", () => {
-    setupVmBDom({ fr: 30, vtsp: 250, p01: 4 });
-    vmBCalc();
-    const html = document.getElementById("cr_vmb").innerHTML;
-    expect(html).toContain("Índice de Tobin");
-    expect(html).toContain("alta prob de falha de desmame");
-    expect(html).toContain("drive alto, risco P-SILI");
-  });
-
-  it("shows the placeholder message when no fields are filled", () => {
-    setupVmBDom();
-    vmBCalc();
-    const html = document.getElementById("cr_vmb").innerHTML;
-    expect(html).toContain("Preencha os campos para calcular");
+  it("no longer lists Beira-leito VM — Ventilação is now the sole VM calculator", () => {
+    window.calcTab = "__none__"; // no case matches, so no calcXxx()/RechCalc dependency is needed
+    const html = rCalc();
+    expect(html).not.toContain("Beira-leito VM");
+    expect(html).toMatch(/SOFA.*qSOFA.*Ânion Gap.*Delta Ratio.*Renal\/Dose.*Cardio.*Wells\/PESI/s);
   });
 });
+

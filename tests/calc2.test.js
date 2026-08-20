@@ -21,16 +21,11 @@ const {
   staticCompliance,
   tobinIndex,
   pfRatio,
-  classifyDPBeiraleito,
   classifyDPVentilacao,
-  classifyComplianceBeiraleito,
   classifyComplianceVentilacao,
-  classifyVtKgBeiraleito,
   classifyVtKgVentilacao,
   classifyPF,
-  classifyTobinBeiraleito,
   classifyTobinVentilacao,
-  classifyP01Beiraleito,
   classifyP01Ventilacao,
 } = window.RechCalc;
 
@@ -292,37 +287,24 @@ describe("VM mechanics: driving pressure / compliance / P-F / Tobin / P0.1", () 
     expect(pfRatio(90, 0.5)).toBe(180);
   });
 
-  it("classifyDPBeiraleito and classifyDPVentilacao agree on thresholds but differ in wording", () => {
-    const a = classifyDPBeiraleito(16);
-    const b = classifyDPVentilacao(16);
-    expect(a.col).toBe("#f87171");
-    expect(b.col).toBe("#f87171");
-    expect(a.msg).not.toBe(b.msg);
-  });
-
-  it("classifyDPBeiraleito/Ventilacao: borderline band (13-15) and normal band (<=13)", () => {
-    expect(classifyDPBeiraleito(14).col).toBe("#fbbf24");
-    expect(classifyDPBeiraleito(13).col).toBe("#34d399");
+  it("classifyDPVentilacao: alert band (>15), borderline band (13-15) and normal band (<=13)", () => {
+    expect(classifyDPVentilacao(16).col).toBe("#f87171");
     expect(classifyDPVentilacao(14).col).toBe("#fbbf24");
     expect(classifyDPVentilacao(13).col).toBe("#34d399");
   });
 
-  it("classifyComplianceBeiraleito/Ventilacao: boundary at exactly 30 and 50", () => {
-    expect(classifyComplianceBeiraleito(30).col).toBe("#fbbf24");
-    expect(classifyComplianceBeiraleito(29.99).col).toBe("#f87171");
-    expect(classifyComplianceBeiraleito(50).col).toBe("#34d399");
-    expect(classifyComplianceBeiraleito(49.99).col).toBe("#fbbf24");
+  it("classifyComplianceVentilacao: boundary at exactly 30 and 50", () => {
+    expect(classifyComplianceVentilacao(29.99).col).toBe("#f87171");
     expect(classifyComplianceVentilacao(30).col).toBe("#fbbf24");
+    expect(classifyComplianceVentilacao(49.99).col).toBe("#fbbf24");
     expect(classifyComplianceVentilacao(50).col).toBe("#34d399");
   });
 
-  it("classifyVtKgBeiraleito/Ventilacao: boundary at exactly 6 and 8, distinct wording", () => {
-    expect(classifyVtKgBeiraleito(6).col).toBe("#34d399");
-    expect(classifyVtKgBeiraleito(6.01).col).toBe("#fbbf24");
-    expect(classifyVtKgBeiraleito(8).col).toBe("#fbbf24");
-    expect(classifyVtKgBeiraleito(8.01).col).toBe("#f87171");
-    expect(classifyVtKgVentilacao(6).msg).not.toBe(classifyVtKgBeiraleito(6).msg);
-    expect(classifyVtKgVentilacao(7).col).toBe("#fbbf24");
+  it("classifyVtKgVentilacao: boundary at exactly 6 and 8", () => {
+    expect(classifyVtKgVentilacao(6).col).toBe("#34d399");
+    expect(classifyVtKgVentilacao(6.01).col).toBe("#fbbf24");
+    expect(classifyVtKgVentilacao(8).col).toBe("#fbbf24");
+    expect(classifyVtKgVentilacao(8.01).col).toBe("#f87171");
   });
 
   it("classifyPF: Berlim 2012 boundaries at 100/200/300", () => {
@@ -334,20 +316,15 @@ describe("VM mechanics: driving pressure / compliance / P-F / Tobin / P0.1", () 
     expect(classifyPF(301).grau).toBe("Normal (>300)");
   });
 
-  it("classifyTobinBeiraleito/Ventilacao: boundary at exactly 105, distinct wording", () => {
-    expect(classifyTobinBeiraleito(105).col).toBe("#34d399");
-    expect(classifyTobinBeiraleito(105.01).col).toBe("#f87171");
-    expect(classifyTobinVentilacao(105).msg).not.toBe(classifyTobinBeiraleito(105).msg);
+  it("classifyTobinVentilacao: boundary at exactly 105", () => {
+    expect(classifyTobinVentilacao(105).col).toBe("#34d399");
     expect(classifyTobinVentilacao(105.01).col).toBe("#f87171");
   });
 
-  it("classifyP01Beiraleito/Ventilacao: boundaries at 0.5 and 3.5, distinct wording", () => {
-    expect(classifyP01Beiraleito(0.5).col).toBe("#34d399");
-    expect(classifyP01Beiraleito(0.49).col).toBe("#fbbf24");
-    expect(classifyP01Beiraleito(3.5).col).toBe("#34d399");
-    expect(classifyP01Beiraleito(3.51).col).toBe("#f87171");
-    expect(classifyP01Ventilacao(3.51).msg).not.toBe(classifyP01Beiraleito(3.51).msg);
+  it("classifyP01Ventilacao: boundaries at 0.5 and 3.5", () => {
     expect(classifyP01Ventilacao(0.49).col).toBe("#fbbf24");
     expect(classifyP01Ventilacao(0.5).col).toBe("#34d399");
+    expect(classifyP01Ventilacao(3.5).col).toBe("#34d399");
+    expect(classifyP01Ventilacao(3.51).col).toBe("#f87171");
   });
 });
