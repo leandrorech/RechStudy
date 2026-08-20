@@ -10,8 +10,10 @@ const html = fs.readFileSync(indexHtmlPath, "utf8");
 // by counting braces, so wrapper tests exercise the actual shipped code
 // (not a re-implementation of it) without executing/booting the whole app.
 function extractFunctionSource(name) {
+  const asyncMarker = `async function ${name}(`;
   const marker = `function ${name}(`;
-  const start = html.indexOf(marker);
+  let start = html.indexOf(asyncMarker);
+  if (start === -1) start = html.indexOf(marker);
   if (start === -1) throw new Error(`function ${name} not found in index.html`);
   const braceStart = html.indexOf("{", start);
   let depth = 0;

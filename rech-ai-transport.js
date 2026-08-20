@@ -7,7 +7,7 @@ async function anthropic(key,model,sys,user,max){const d=await json('https://api
 async function compatible(p,url,key,model,sys,user,max,completionTokens=false){const body={model,messages:[{role:'system',content:sys},{role:'user',content:user}]};body[completionTokens?'max_completion_tokens':'max_tokens']=max;const d=await json(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},body:JSON.stringify(body)},p);const c=d.choices?.[0]?.message?.content;return Array.isArray(c)?c.map(x=>x?.text||'').join(''):String(c||'')}
 async function gemini(key,model,sys,user,max){const u=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;const d=await json(u,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{maxOutputTokens:max}})},'gemini');return d.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||''}
 function customUrl(){let u=(localStorage.getItem('rs_ai_custom_base')||'').trim().replace(/\/+$/,'');if(!u)return'';if(/\/chat\/completions$/i.test(u))return u;if(!/\/v1$/i.test(u))u+='/v1';return u+'/chat/completions'}
-api=async function(sys,user,tokensKey='default'){
+window.api=async function(sys,user,tokensKey='default'){
   const p=rechAiProvider(),key=rechAiKey(p),model=rechAiModel(p);if(!key)throw new Error(`API Key de ${RECH_AI_CATALOG[p].label} não configurada`);
   let ctx='';try{ctx=baseContext()}catch{}if(ctx){sys=String(sys||'')+ctx;user=`${ctx}\n\n--- [TAREFA DO APP] ---\n${user}`}
   const max=(typeof TOKENS!=='undefined'&&(TOKENS[tokensKey]||TOKENS.default))||8000;let out='';

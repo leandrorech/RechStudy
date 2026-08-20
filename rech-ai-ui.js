@@ -22,7 +22,7 @@ window.configureCustomProvider=function(){
   const m=prompt('ID exato do modelo:',localStorage.getItem('rs_ai_custom_model')||'');if(m===null)return;
   localStorage.setItem('rs_ai_custom_base',b.trim());localStorage.setItem('rs_ai_custom_model',m.trim());render();
 };
-promptKey=function(){
+window.promptKey=function(){
   const prov=p(),cur=rechAiKey(prov);
   const entered=prompt(`API Key — ${C[prov].label}\n\nVazio + OK apaga somente a chave deste provedor.`,cur);if(entered===null)return;
   const key=entered.trim();
@@ -32,8 +32,8 @@ promptKey=function(){
   else{sessionStorage.setItem(sk(prov),key);localStorage.removeItem(lk(prov));}
   render();
 };
-deleteKey=function(){const prov=p();if(!confirm(`Apagar a chave de ${C[prov].label}?`))return;localStorage.removeItem(lk(prov));sessionStorage.removeItem(sk(prov));render()};
-updateKeyStatus=function(){
+window.deleteKey=function(){const prov=p();if(!confirm(`Apagar a chave de ${C[prov].label}?`))return;localStorage.removeItem(lk(prov));sessionStorage.removeItem(sk(prov));render()};
+window.updateKeyStatus=function(){
   const el=document.getElementById('key-status');if(!el)return;const prov=p(),has=!!rechAiKey(prov),sess=!!sessionStorage.getItem(sk(prov));
   el.innerHTML=has?`<span style="color:${sess?'#fbbf24':'#34d399'}">${sess?'🔑':'✅'} ${C[prov].label}${sess?' · sessão':''}</span> <button onclick="deleteKey()" style="padding:1px 5px;border-radius:3px;border:1px solid #7f1d1d;background:transparent;color:#f87171;font-size:9px;cursor:pointer">🗑</button>`:`<span style="color:#f87171">⚠️ ${C[prov].label} sem key</span>`;
 };
